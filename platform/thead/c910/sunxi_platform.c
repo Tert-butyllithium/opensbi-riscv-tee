@@ -155,7 +155,8 @@ static int c910_timer_init(bool cold_boot)
 
 static int c910_system_shutdown(u32 type)
 {
-	asm volatile ("ebreak");
+	/*TODO:power down something*/
+	while(1);
 	return 0;
 }
 
@@ -296,19 +297,19 @@ static int sunxi_pmp_region_info(u32 hartid, u32 index, ulong *prot,
 		*log2size = log2roundup(0x40000000);
 		break;
 	case 1:
-		*prot	  = PMP_R | PMP_W;
-		*addr	  = 0x1000000;
-		*log2size = log2roundup(0x8000000);
+		*prot	  = PMP_R | PMP_W | PMP_X;
+		*addr	  = 0x80000000;
+		*log2size = log2roundup(0x40000000);
 		break;
 	case 2:
-		*prot	  = PMP_R | PMP_W;
-		*addr	  = 0x9010000;
-		*log2size = log2roundup(0x20000);
+		*prot	  = PMP_R | PMP_W | PMP_X;
+		*addr	  = 0x20000;
+		*log2size = log2roundup(0x8000);
 		break;
 	case 3:
 		*prot	  = PMP_R | PMP_W;
-		*addr	  = 0x10000000;
-		*log2size = log2roundup(0x8000000);
+		*addr	  = 0x0;
+		*log2size = log2roundup(0x40000000);
 		break;
 	default:
 		ret = -1;

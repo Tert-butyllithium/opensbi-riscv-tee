@@ -81,26 +81,4 @@
 
 	PROVIDE(_fw_end = .);
 
-	/* TODO(wait for binary compile)
-	.drvbase :
-  	{
-  	  *(.drvbase)
-  	}
-
-  	.drvconsole :
-  	{
-  	  *(.drvconsole)
-  	}
-
-  	.drvrtc :
-  	{
-  	  *(.drvrtc)
-  	}
-
-  	. = ALIGN(0x1000);
-
-  	_enclave_start = .;
-  	/* defined in configure.ac */
-  	. = . + ENCLAVE_REV_MEM_SIZE;
-  	. = 0x81700000;
-	  */
+	/* TODO(change the lds, to insert our drivers) */

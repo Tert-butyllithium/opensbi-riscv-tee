@@ -51,6 +51,7 @@ elif [ "x$TARGET_BUILD_VARIANT" = "xtina" ];then
 	BUILD_CHIP=$TARGET_CHIP
 	OPENSBI_TARGET_DIR=$TOP_DIR/../../../device/config/chips/$TARGET_PLATFORM/bin
 else
+	echo "TARGET_BUILD_VARIANT=$TARGET_BUILD_VARIANT"
 	echo "buidconfig file is null." && return 1
 fi
 

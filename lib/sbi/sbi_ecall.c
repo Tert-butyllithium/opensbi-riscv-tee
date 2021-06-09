@@ -11,6 +11,7 @@
 #include <sbi/sbi_ecall_interface.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/sbi_console.h>
 
 u16 sbi_ecall_version_major(void)
 {
@@ -71,6 +72,7 @@ void sbi_ecall_unregister_extension(struct sbi_ecall_extension *ext)
 		sbi_list_del_init(&ext->head);
 }
 
+
 int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		      struct sbi_scratch *scratch)
 {
@@ -91,6 +93,10 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	args[5] = regs->a5;
 
 	ext = sbi_ecall_find_extension(extension_id);
+
+	if(extension_id>=350)
+		sbi_printf("############### ecall handle: %ld\n", extension_id);
+
 	if (ext && ext->handle) {
 		ret = ext->handle(scratch, extension_id, func_id,
 				  args, &out_val, &trap);
@@ -98,7 +104,8 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		    extension_id <= SBI_EXT_0_1_SHUTDOWN)
 			is_0_1_spec = 1;
 	} else {
-		ret = SBI_ENOTSUPP;
+		// ret = SBI_ENOTSUPP;
+		ret = SBI_ETRAP;
 	}
 
 	if (ret == SBI_ETRAP) {
@@ -148,6 +155,8 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
+	sbi_printf("############### init ecall_ebi successfully\n");
+	sbi_printf("ecall_ebi: %p\n",ecall_ebi.handle);
 	if (ret)
 		return ret;
 

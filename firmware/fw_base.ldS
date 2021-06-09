@@ -80,3 +80,27 @@
 	. = ALIGN(0x1000); /* Need this to create proper sections */
 
 	PROVIDE(_fw_end = .);
+
+	/* TODO(wait for binary compile)
+	.drvbase :
+  	{
+  	  *(.drvbase)
+  	}
+
+  	.drvconsole :
+  	{
+  	  *(.drvconsole)
+  	}
+
+  	.drvrtc :
+  	{
+  	  *(.drvrtc)
+  	}
+
+  	. = ALIGN(0x1000);
+
+  	_enclave_start = .;
+  	/* defined in configure.ac */
+  	. = . + ENCLAVE_REV_MEM_SIZE;
+  	. = 0x81700000;
+	  */

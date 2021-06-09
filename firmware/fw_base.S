@@ -482,6 +482,13 @@ _trap_handler_m_mode:
 
 	/* Re-use current SP as exception stack */
 	add	sp, sp, -(SBI_TRAP_REGS_SIZE)
+	/* We came from u-mode (for tee) */
+_trap_handler_u_mode:
+	/* Set T0 to original SP */
+	add	t0, sp, zero
+
+	/* Re-use current SP as exception stack */
+	add	sp, sp, -(SBI_TRAP_REGS_SIZE)
 
 _trap_handler_all_mode:
 	/* Save original SP (from T0) on stack */

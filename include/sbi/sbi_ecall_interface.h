@@ -70,6 +70,19 @@
 #define SBI_SPEC_VERSION_MINOR_MASK	0xffffff
 #define SBI_EXT_VENDOR_START		0x09000000
 #define SBI_EXT_VENDOR_END		0x09FFFFFF
+
+/* SBI function IDs for EBI extension*/
+#define SBI_EXT_EBI_START   398
+#define SBI_EXT_EBI_CREATE  399
+#define SBI_EXT_EBI_ENTER   400
+#define SBI_EXT_EBI_EXIT    401
+#define SBI_EXT_EBI_GOTO    402
+#define SBI_EXT_EBI_FETCH   403
+#define SBI_EXT_EBI_RELEASE 404
+
+#define SBI_EXT_EBI_PUTS    410
+#define SBI_EXT_EBI_GETS    411
+
 /* clang-format on */
 
 #endif

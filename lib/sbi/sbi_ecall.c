@@ -90,22 +90,21 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
-	if(extension_id == 399){
-		sbi_printf("handled exception %lx, %lx!, func_id: %lx\n", mcause, extension_id, func_id);
-	}
-
 	if (prev_mode == 0) {
-		if (regs->a6 != 0x233){
-			trap.epc = regs->mepc;
+		if (regs->a6 != 0x233) {
+			// sbi_printf("illegal exception %lx, %lx!\n", mcause, extension_id);
+			// sbi_printf("return to %lx\n",regs->mepc);
+			// regs->mstatus |= 1 << MSTATUS_MPP_SHIFT;
+			trap.epc   = regs->mepc;
 			trap.cause = mcause;
-			trap.tval = mtval;
+			trap.tval  = mtval;
 			trap.tval2 = mtval2;
 			trap.tinst = mtinst;
 			sbi_trap_redirect(regs, &trap, scratch);
 			return 0;
-		}
-		else{
-			sbi_printf("handled exception %lx, %lx!\n", mcause, extension_id);
+		} else {
+			sbi_printf("handled exception %lx, %lx!\n", mcause,
+				   extension_id);
 		}
 	}
 
@@ -115,7 +114,6 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	args[3] = regs->a3;
 	args[4] = regs->a4;
 	args[5] = regs->a5;
-
 
 	ext = sbi_ecall_find_extension(extension_id);
 

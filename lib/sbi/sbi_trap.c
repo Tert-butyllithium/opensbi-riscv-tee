@@ -221,6 +221,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 	ulong mcause = csr_read(CSR_MCAUSE);
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	struct sbi_trap_info trap, *uptrap;
+	// ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
 	if (misa_extension('H')) {
 		mtval2 = csr_read(CSR_MTVAL2);
@@ -264,6 +265,8 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 	case CAUSE_SUPERVISOR_ECALL:
 	case CAUSE_HYPERVISOR_ECALL:
 	case CAUSE_USER_ECALL:
+		// if (prev_mode != 1)
+			// sbi_printf("previous mode is %lu\n", prev_mode);
 		rc  = sbi_ecall_handler(hartid, mcause, regs, scratch);
 		msg = "ecall handler failed";
 		break;

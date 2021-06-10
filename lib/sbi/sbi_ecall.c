@@ -134,8 +134,8 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 
 	ext = sbi_ecall_find_extension(extension_id);
 
-	if (extension_id >= 350)
-		sbi_printf("############### ecall handle: %ld\n", extension_id);
+	// if (extension_id >= 350)
+		// sbi_printf("############### ecall handle: %ld\n", extension_id);
 
 	if (ext && ext->handle) {
 		ret = ext->handle(scratch, extension_id, func_id, args,

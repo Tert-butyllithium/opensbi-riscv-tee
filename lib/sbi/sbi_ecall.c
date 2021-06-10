@@ -12,6 +12,8 @@
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_console.h>
+#include <sbi/riscv_encoding.h>
+#include <sbi/riscv_asm.h>
 
 u16 sbi_ecall_version_major(void)
 {
@@ -29,7 +31,8 @@ struct sbi_ecall_extension *sbi_ecall_find_extension(unsigned long extid)
 {
 	struct sbi_ecall_extension *t, *ret = NULL;
 
-	sbi_list_for_each_entry(t, &ecall_exts_list, head) {
+	sbi_list_for_each_entry(t, &ecall_exts_list, head)
+	{
 		if (t->extid_start <= extid && extid <= t->extid_end) {
 			ret = t;
 			break;
@@ -61,7 +64,8 @@ void sbi_ecall_unregister_extension(struct sbi_ecall_extension *ext)
 	if (!ext)
 		return;
 
-	sbi_list_for_each_entry(t, &ecall_exts_list, head) {
+	sbi_list_for_each_entry(t, &ecall_exts_list, head)
+	{
 		if (t == ext) {
 			found = TRUE;
 			break;
@@ -72,6 +76,21 @@ void sbi_ecall_unregister_extension(struct sbi_ecall_extension *ext)
 		sbi_list_del_init(&ext->head);
 }
 
+void redirect_trap(uintptr_t epc, uintptr_t mstatus, uintptr_t badaddr)
+{
+    csr_write(sbadaddr, badaddr);
+    csr_write(sepc, epc);
+    csr_write(scause, csr_read(mcause));
+    csr_write(mepc, csr_read(stvec));
+
+    uintptr_t new_mstatus = mstatus & ~(MSTATUS_SPP | MSTATUS_SPIE | MSTATUS_SIE);
+    uintptr_t mpp_s = MSTATUS_MPP & (MSTATUS_MPP >> 1);
+    new_mstatus |= (mstatus * (MSTATUS_SPIE / MSTATUS_SIE)) & MSTATUS_SPIE;
+    new_mstatus |= (mstatus / (mpp_s / MSTATUS_SPP)) & MSTATUS_SPP;
+    new_mstatus |= mpp_s;
+    csr_write(mstatus, new_mstatus);
+}
+
 
 int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		      struct sbi_scratch *scratch)
@@ -79,11 +98,31 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	int ret = 0;
 	struct sbi_ecall_extension *ext;
 	unsigned long extension_id = regs->a7;
-	unsigned long func_id = regs->a6;
-	struct sbi_trap_info trap = {0};
-	unsigned long out_val = 0;
-	bool is_0_1_spec = 0;
+	unsigned long func_id	   = regs->a6;
+	struct sbi_trap_info trap  = { 0 };
+	unsigned long out_val	   = 0;
+	bool is_0_1_spec	   = 0;
 	unsigned long args[6];
+	// ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
+	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
+	if (prev_mode == 0) {
+		if (regs->a6 != 0x233){
+			sbi_printf("illegal exception %lx, %lx!\n", mcause, extension_id);
+			sbi_printf("return to %lx\n",regs->mepc);
+			// regs->mstatus |= 1 << MSTATUS_MPP_SHIFT;
+			trap.epc = regs->mepc;
+			// trap.cause = mcause;
+			// trap.tval = mtval;
+			// trap.tval2 = mtval2;
+			// trap.tinst = mtinst;
+			sbi_trap_redirect(regs, &trap, scratch);
+			// redirect_trap(regs->mepc,regs->mstatus,csr_read(CSR_MTVAL));
+			return 0;
+		}
+		else{
+			sbi_printf("handled exception %lx, %lx!\n", mcause, extension_id);
+		}
+	}
 
 	args[0] = regs->a0;
 	args[1] = regs->a1;
@@ -92,20 +131,20 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	args[4] = regs->a4;
 	args[5] = regs->a5;
 
+
 	ext = sbi_ecall_find_extension(extension_id);
 
-	if(extension_id>=350)
+	if (extension_id >= 350)
 		sbi_printf("############### ecall handle: %ld\n", extension_id);
 
 	if (ext && ext->handle) {
-		ret = ext->handle(scratch, extension_id, func_id,
-				  args, &out_val, &trap);
+		ret = ext->handle(scratch, extension_id, func_id, args,
+				  &out_val, &trap);
 		if (extension_id >= SBI_EXT_0_1_SET_TIMER &&
 		    extension_id <= SBI_EXT_0_1_SHUTDOWN)
 			is_0_1_spec = 1;
 	} else {
-		// ret = SBI_ENOTSUPP;
-		ret = SBI_ETRAP;
+		ret = SBI_ENOTSUPP;
 	}
 
 	if (ret == SBI_ETRAP) {
@@ -156,7 +195,7 @@ int sbi_ecall_init(void)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
 	sbi_printf("############### init ecall_ebi successfully\n");
-	sbi_printf("ecall_ebi: %p\n",ecall_ebi.handle);
+	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);
 	if (ret)
 		return ret;
 

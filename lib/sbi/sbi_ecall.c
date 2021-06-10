@@ -103,18 +103,22 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	unsigned long out_val	   = 0;
 	bool is_0_1_spec	   = 0;
 	unsigned long args[6];
-	// ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
+	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
+
 	if (prev_mode == 0) {
+        if (extension_id == 399)
+            sbi_printf("[extensionid == 399] a6 = %lx\n", regs->a6);
+
 		if (regs->a6 != 0x233){
-			sbi_printf("illegal exception %lx, %lx!\n", mcause, extension_id);
-			sbi_printf("return to %lx\n",regs->mepc);
+			// sbi_printf("illegal exception %lx, %lx!\n", mcause, extension_id);
+			// sbi_printf("return to %lx\n",regs->mepc);
 			// regs->mstatus |= 1 << MSTATUS_MPP_SHIFT;
 			trap.epc = regs->mepc;
-			// trap.cause = mcause;
-			// trap.tval = mtval;
-			// trap.tval2 = mtval2;
-			// trap.tinst = mtinst;
+			trap.cause = mcause;
+			trap.tval = mtval;
+			trap.tval2 = mtval2;
+			trap.tinst = mtinst;
 			sbi_trap_redirect(regs, &trap, scratch);
 			// redirect_trap(regs->mepc,regs->mstatus,csr_read(CSR_MTVAL));
 			return 0;

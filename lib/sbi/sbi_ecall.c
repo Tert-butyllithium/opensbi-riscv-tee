@@ -76,22 +76,6 @@ void sbi_ecall_unregister_extension(struct sbi_ecall_extension *ext)
 		sbi_list_del_init(&ext->head);
 }
 
-void redirect_trap(uintptr_t epc, uintptr_t mstatus, uintptr_t badaddr)
-{
-    csr_write(sbadaddr, badaddr);
-    csr_write(sepc, epc);
-    csr_write(scause, csr_read(mcause));
-    csr_write(mepc, csr_read(stvec));
-
-    uintptr_t new_mstatus = mstatus & ~(MSTATUS_SPP | MSTATUS_SPIE | MSTATUS_SIE);
-    uintptr_t mpp_s = MSTATUS_MPP & (MSTATUS_MPP >> 1);
-    new_mstatus |= (mstatus * (MSTATUS_SPIE / MSTATUS_SIE)) & MSTATUS_SPIE;
-    new_mstatus |= (mstatus / (mpp_s / MSTATUS_SPP)) & MSTATUS_SPP;
-    new_mstatus |= mpp_s;
-    csr_write(mstatus, new_mstatus);
-}
-
-
 int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		      struct sbi_scratch *scratch)
 {
@@ -103,20 +87,21 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	unsigned long out_val	   = 0;
 	bool is_0_1_spec	   = 0;
 	unsigned long args[6];
-	// ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
+	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
+
+	if(extension_id == 399){
+		sbi_printf("handled exception %lx, %lx!, func_id: %lx\n", mcause, extension_id, func_id);
+	}
+
 	if (prev_mode == 0) {
 		if (regs->a6 != 0x233){
-			sbi_printf("illegal exception %lx, %lx!\n", mcause, extension_id);
-			sbi_printf("return to %lx\n",regs->mepc);
-			// regs->mstatus |= 1 << MSTATUS_MPP_SHIFT;
 			trap.epc = regs->mepc;
-			// trap.cause = mcause;
-			// trap.tval = mtval;
-			// trap.tval2 = mtval2;
-			// trap.tinst = mtinst;
+			trap.cause = mcause;
+			trap.tval = mtval;
+			trap.tval2 = mtval2;
+			trap.tinst = mtinst;
 			sbi_trap_redirect(regs, &trap, scratch);
-			// redirect_trap(regs->mepc,regs->mstatus,csr_read(CSR_MTVAL));
 			return 0;
 		}
 		else{
@@ -133,9 +118,6 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 
 
 	ext = sbi_ecall_find_extension(extension_id);
-
-	if (extension_id >= 350)
-		sbi_printf("############### ecall handle: %ld\n", extension_id);
 
 	if (ext && ext->handle) {
 		ret = ext->handle(scratch, extension_id, func_id, args,

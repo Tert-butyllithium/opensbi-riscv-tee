@@ -648,3 +648,12 @@ _reset_regs:
 	csrw CSR_MSCRATCH, 0
 
 	ret
+
+  .section ".drvbase","a",@progbits
+
+.align 19
+
+  .globl _base_start, _base_end
+_base_start:
+  .incbin "bbl_basedrv"
+_base_end:

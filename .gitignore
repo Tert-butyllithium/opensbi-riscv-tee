@@ -13,5 +13,3 @@ tags
 run.sh
 gdb.sh
 make.sh
-gdb.sh
-run.sh

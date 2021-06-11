@@ -103,8 +103,7 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 			sbi_trap_redirect(regs, &trap, scratch);
 			return 0;
 		} else {
-			sbi_printf("handled exception %lx, %lx!\n", mcause,
-				   extension_id);
+			sbi_printf("[sbi_ecall_handler] EBI call number: %lu\n", extension_id);
 		}
 	}
 

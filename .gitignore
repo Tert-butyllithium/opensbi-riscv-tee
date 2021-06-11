@@ -9,3 +9,7 @@ install/
 
 # Development friendly files
 tags
+
+run.sh
+gdb.sh
+make.sh

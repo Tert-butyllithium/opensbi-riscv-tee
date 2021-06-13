@@ -14,5 +14,10 @@ SECTIONS
 {
 	#include "fw_base.ldS"
 
+	_enclave_start = .;
+	. = . + 0x1000000;
+	. = 0x81700000;
+	_enclave_end = .;
+
 	PROVIDE(_fw_reloc_end = .);
 }

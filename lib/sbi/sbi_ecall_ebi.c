@@ -1,11 +1,12 @@
 #include <sbi/sbi_ecall.h>
 #include <sbi/sbi_ecall_interface.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_version.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
 
-extern int _base_start, _base_end;
+extern char _base_start, _base_end;
 
 static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 unsigned long extid, unsigned long funcid,
@@ -25,6 +26,8 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         // sbi_printf("base_start @ %p\n", &_base_start);
         // regs[A0_INDEX] = create_enclave(regs, mepc);
         //write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
+        ulong mepc = csr_read(CSR_MEPC);
+        create_enclave(args, mepc);
         return ret;
     }
 

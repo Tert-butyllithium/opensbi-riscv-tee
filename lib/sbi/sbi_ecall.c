@@ -167,10 +167,7 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
-	sbi_printf("############### init ecall_ebi successfully\n");
-	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);
 	if (ret)
 		return ret;
-
 	return 0;
 }

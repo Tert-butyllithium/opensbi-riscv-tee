@@ -90,10 +90,6 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
-	if(extension_id == 399){
-		sbi_printf("handled exception %lx, %lx!, func_id: %lx\n", mcause, extension_id, func_id);
-	}
-
 	if (prev_mode == 0) {
 		if (regs->a6 != 0x233){
 			trap.epc = regs->mepc;
@@ -176,10 +172,7 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
-	sbi_printf("############### init ecall_ebi successfully\n");
-	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);
 	if (ret)
 		return ret;
-
 	return 0;
 }

@@ -27,6 +27,7 @@
 #define SBI_EXT_IPI				0x735049
 #define SBI_EXT_RFENCE				0x52464E43
 #define SBI_EXT_SRST                            0x53525354
+#define SBI_EXT_EBI				0x19260817
 
 /* SBI function IDs for BASE extension*/
 #define SBI_EXT_BASE_GET_SPEC_VERSION		0x0

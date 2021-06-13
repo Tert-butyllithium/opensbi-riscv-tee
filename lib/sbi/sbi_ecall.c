@@ -90,21 +90,15 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
-	if (prev_mode == 0) {
-		if (regs->a6 != 0x233) {
-			// sbi_printf("illegal exception %lx, %lx!\n", mcause, extension_id);
-			// sbi_printf("return to %lx\n",regs->mepc);
-			// regs->mstatus |= 1 << MSTATUS_MPP_SHIFT;
-			trap.epc   = regs->mepc;
-			trap.cause = mcause;
-			trap.tval  = mtval;
-			trap.tval2 = mtval2;
-			trap.tinst = mtinst;
-			sbi_trap_redirect(regs, &trap, scratch);
-			return 0;
-		} else {
-			sbi_printf("[sbi_ecall_handler] EBI call number: %lu\n", extension_id);
-		}
+	// The ecall is a syscall if it is from U-mode but a7 is not SBI_EXT_EBI
+	if (prev_mode == 0 && regs->a7 != SBI_EXT_EBI) {
+		trap.epc   = regs->mepc;
+		trap.cause = mcause;
+		trap.tval  = mtval;
+		trap.tval2 = mtval2;
+		trap.tinst = mtinst;
+		sbi_trap_redirect(regs, &trap, scratch);
+		return 0;
 	}
 
 	args[0] = regs->a0;

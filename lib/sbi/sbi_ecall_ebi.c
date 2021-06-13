@@ -12,9 +12,9 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 unsigned long *args, unsigned long *out_val,
 				 struct sbi_trap_info *out_trap)
 {
-	int ret		    = 233;
+	int ret		    = 0;
     unsigned long core = csr_read(mhartid); // TODO(haonan): needs to verify this value is the core id;
-    switch (extid) {
+    switch (funcid) {
     case SBI_EXT_EBI_CREATE:
         sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_CREATE\n");
         sbi_printf("[sbi_ecall_ebi_handler] extid = %lu, funcid = 0x%lx, args[0] = 0x%lx, args[1] = 0x%lx, core = %lu\n", 
@@ -32,7 +32,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 }
 
 struct sbi_ecall_extension ecall_ebi = {
-	.extid_start = SBI_EXT_EBI_START,
-	.extid_end   = SBI_EXT_EBI_RELEASE,
+	.extid_start = SBI_EXT_EBI,
+	.extid_end   = SBI_EXT_EBI,
 	.handle	     = sbi_ecall_ebi_handler,
 };

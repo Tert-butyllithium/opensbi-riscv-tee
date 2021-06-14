@@ -27,32 +27,8 @@ void poweroff(uint16_t code)
 #define die(str, ...) ({ sbi_printf("%s:%d: " str "\n", __FILE__, __LINE__, ##__VA_ARGS__); poweroff(-1); })
 
 
-size_t strlen(const char *s)
-{
-	const char *p = s;
-	while (*p)
-		p++;
-	return p - s;
-}
-
-int strcmp(const char *s1, const char *s2)
-{
-	unsigned char c1, c2;
-
-	do {
-		c1 = *s1++;
-		c2 = *s2++;
-	} while (c1 != 0 && c1 == c2);
-
-	return c1 - c2;
-}
-
-char *strcpy(char *dest, const char *src)
-{
-	char *d = dest;
-	while ((*d++ = *src++))
-		;
-	return dest;
+int memset(){
+	return -1;
 }
 
 long atol(const char *str)
@@ -338,6 +314,7 @@ void init_enclaves(void)
 	enclaves[NUM_ENCLAVE].status = ENC_RUN;
 	for (size_t i = 0; i < NUM_ENCLAVE; ++i)
 		enclaves[i].status = ENC_FREE;
+	sbi_printf("[EBI] enclaves init successfully!");
 }
 
 uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)

@@ -18,6 +18,7 @@
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_tlb.h>
 #include <sbi/sbi_version.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 
 #define BANNER                                              \
 	"   ____     SUSTech-COMPASS  _____ ____ _____\n"     \
@@ -214,6 +215,11 @@ void __noreturn sbi_init(struct sbi_scratch *scratch)
 		init_coldboot(scratch, hartid);
 	else
 		init_warmboot(scratch, hartid);
+
+	// init memory for EBI
+	if(hartid == 0){
+		init_enclaves();
+	}
 }
 
 unsigned long sbi_init_count(u32 hartid)

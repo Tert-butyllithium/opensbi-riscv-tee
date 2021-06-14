@@ -26,6 +26,9 @@ void poweroff(uint16_t code)
 #define assert(x) ({ if (!(x)) die("assertion failed: %s", #x); })
 #define die(str, ...) ({ sbi_printf("%s:%d: " str "\n", __FILE__, __LINE__, ##__VA_ARGS__); poweroff(-1); })
 
+int memset() {
+	return -1;
+}
 
 int memset(){
 	return -1;
@@ -127,8 +130,7 @@ void enclave_mem_init()
 uintptr_t enclave_mem_alloc(enclave_context *context, size_t enclave_size)
 {
 	enclave_page_t page;
-	assert((enclave_size & MASK(EPAGE_SHIFT)) ==
-	       0); // at least one page should be allocated
+	assert((enclave_size & MASK(EPAGE_SHIFT)) == 0); // at least one page should be allocated
 	size_t page_num = enclave_size >> EPAGE_SHIFT;
 	/* Look for available memory */
 	char ok		= 0;

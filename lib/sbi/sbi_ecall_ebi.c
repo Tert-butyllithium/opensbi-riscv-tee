@@ -7,6 +7,7 @@
 #include <sbi/sbi_console.h>
 
 extern char _base_start, _base_end;
+extern char _enclave_start, _enclave_end;
 
 static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 unsigned long extid, unsigned long funcid,
@@ -21,6 +22,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[sbi_ecall_ebi_handler] extid = %lu, funcid = 0x%lx, args[0] = 0x%lx, args[1] = 0x%lx, core = %lu\n", 
             extid, funcid, args[0], args[1], core);
         sbi_printf("[sbi_ecall_ebi_handler] _base_start @ %p, _base_end @ %p\n", &_base_start, &_base_end);
+        sbi_printf("[sbi_ecall_ebi_handler] _enclave_start @ %p, _enclave_end @ %p\n", &_enclave_start, &_enclave_end);
         // sbi_printf("handle syscall %d %lx %lx at core %ld\n", (int)extid, args[0], args[1], core);
         // sbi_printf("Enclave Created: %lx %lx %lx\n", args[0], args[1], args[2]);
         // sbi_printf("base_start @ %p\n", &_base_start);
@@ -28,6 +30,11 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         //write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
         ulong mepc = csr_read(CSR_MEPC);
         create_enclave(args, mepc);
+        sbi_printf("[sbi_ecall_ebi_handler] after create_enclave\n");
+        return ret;
+
+    case SBI_EXT_EBI_ENTER:
+        sbi_printf("[sbi_ecall_ebi_handler] enter\n");
         return ret;
     }
 

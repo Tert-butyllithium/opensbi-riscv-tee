@@ -30,10 +30,6 @@ int memset() {
 	return -1;
 }
 
-int memset(){
-	return -1;
-}
-
 long atol(const char *str)
 {
 	long res = 0;
@@ -166,6 +162,7 @@ uintptr_t enclave_mem_alloc(enclave_context *context, size_t enclave_size)
 
 	page		  = pages[page_idx];
 	context->pa	  = page.pa;
+	sbi_printf("[enclave_mem_alloc] context->pa = %lx\n", context->pa);
 	context->mem_size = enclave_size;
 	return EBI_OK;
 }
@@ -327,8 +324,12 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	size_t binary_size	 = args[1];
 	uintptr_t driver_bitmask = args[2];
 
+	sbi_printf("[create_enclave] user_payload_addr = 0x%lx\n", addr);
+
 	if (PAGE_UP(binary_size) > EMEM_SIZE)
 		return EBI_ERROR;
+
+	sbi_printf("[create_enclave] log1\n");
 
 	enclave_context *context = NULL;
 	uintptr_t avail_id	 = find_avail_enclave();
@@ -338,9 +339,11 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	/* LOADED enclave, loaded not running */
 	enclaves[avail_id].status = ENC_LOAD;
 	context			  = &enclaves[avail_id];
+	sbi_printf("[create_enclave] log2\n");
 
 	if (EBI_OK != enclave_mem_alloc(context, EMEM_SIZE))
 		return EBI_ERROR;
+	sbi_printf("[create_enclave] log3\n");
 
 	uintptr_t base_start, base_end;
 	base_start	     = (uintptr_t)&_base_start;
@@ -356,7 +359,9 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 		drv_size = drvcpy(&start_addr, driver_bitmask);
 	else
 		start_addr = 0;
-	sbi_printf("start_addr: %lx\n", start_addr);
+	sbi_printf("[create_enclave] start_addr: %lx\n", start_addr);
+	sbi_printf("[create_enclave] base_start: %lx\n", base_start);
+	sbi_printf("[create_enclave] enclave pa = %lx\n", context->pa);
 	memcpy_from_user(addr, context->pa, binary_size, mepc);
 	init_csr_context(context);
 

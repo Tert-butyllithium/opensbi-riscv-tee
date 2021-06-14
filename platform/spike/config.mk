@@ -22,7 +22,7 @@ ifeq ($(PLATFORM_RISCV_XLEN), 32)
   FW_JUMP_ADDR=0x80400000
 else
   # This needs to be 2MB aligned for 64-bit system
-  FW_JUMP_ADDR=0x80200000
+  FW_JUMP_ADDR=0x82000000
 endif
 FW_JUMP_FDT_ADDR=0x82200000
 FW_PAYLOAD=y

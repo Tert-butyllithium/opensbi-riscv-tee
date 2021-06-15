@@ -16,6 +16,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 {
 	int ret		    = 0;
     unsigned long core = csr_read(mhartid); // TODO(haonan): needs to verify this value is the core id;
+    ulong mepc = csr_read(CSR_MEPC);
     switch (funcid) {
     case SBI_EXT_EBI_CREATE:
         sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_CREATE\n");
@@ -28,13 +29,16 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         // sbi_printf("base_start @ %p\n", &_base_start);
         // regs[A0_INDEX] = create_enclave(regs, mepc);
         //write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
-        ulong mepc = csr_read(CSR_MEPC);
         create_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] after create_enclave\n");
         return ret;
 
     case SBI_EXT_EBI_ENTER:
         sbi_printf("[sbi_ecall_ebi_handler] enter\n");
+        enter_enclave(args, mepc);
+        sbi_printf("[sbi_ecall_ebi_handler] back from enter_enclave\n");
+        sbi_printf("[sbi_ecall_ebi_handler] into->pa: 0x%lx\n", args[1]);
+
         return ret;
     }
 

@@ -14,6 +14,7 @@ SECTIONS
 {
 	#include "fw_base.ldS"
 	
+	. = ALIGN(0x1000);
 	_enclave_start = .;
 	. = 0x81700000;
 	_enclave_end = .;

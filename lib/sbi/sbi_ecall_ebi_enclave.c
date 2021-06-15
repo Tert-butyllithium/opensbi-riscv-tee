@@ -3,6 +3,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_string.h>
+#include <sbi/sbi_trap.h>
 
 #define MAX_PAGE 8192
 static enclave_page_t pages[MAX_PAGE];
@@ -217,8 +218,9 @@ void pmp_switch(enclave_context *context)
 		     [p5] "r"(p5), [cfg] "r"(cfg));
 }
 
-void save_umode_context(enclave_context *context, uintptr_t *regs)
+void save_umode_context(enclave_context *context, struct sbi_trap_regs *regs)
 {
+	sbi_printf("[save_umode_context] regs @ 0x%p\n", regs);
 	sbi_memcpy(context->umode_context, regs, INTEGER_CONTEXT_SIZE);
 }
 
@@ -227,12 +229,13 @@ void restore_umode_context(enclave_context *context, uintptr_t *regs)
 	sbi_memcpy(regs, context->umode_context, INTEGER_CONTEXT_SIZE);
 }
 
-void save_csr_context(enclave_context *from, uintptr_t mepc)
+void save_csr_context(enclave_context *from, uintptr_t mepc, struct sbi_trap_regs *regs)
 {
 	from->ns_satp = csr_read(CSR_SATP);
 
 	from->ns_mepc	 = mepc + 4;
-	from->ns_mstatus = csr_read(CSR_MSTATUS);
+	// from->ns_mstatus = csr_read(CSR_MSTATUS);
+	from->ns_mstatus = regs->mstatus;
 	from->ns_medeleg = csr_read(CSR_MEDELEG);
 
 	from->ns_sie	  = csr_read(CSR_SIE);
@@ -241,19 +244,22 @@ void save_csr_context(enclave_context *from, uintptr_t mepc)
 	from->ns_sscratch = csr_read(CSR_SSCRATCH);
 }
 
-void restore_csr_context(enclave_context *into)
+void restore_csr_context(enclave_context *into, struct sbi_trap_regs *regs)
 {
 	csr_write(CSR_SATP, into->ns_satp);
 	flush_tlb();
 
-	csr_write(CSR_MEPC, into->ns_mepc);
-	csr_write(CSR_MSTATUS, into->ns_mstatus);
+	// csr_write(CSR_MEPC, into->ns_mepc);
+	// csr_write(CSR_MSTATUS, into->ns_mstatus);
 	csr_write(CSR_MEDELEG, into->ns_medeleg);
 
 	csr_write(CSR_SIE, into->ns_sie);
 	csr_write(CSR_STVEC, into->ns_stvec);
 	csr_write(CSR_SSTATUS, into->ns_sstatus);
 	csr_write(CSR_SSCRATCH, into->ns_sscratch);
+
+	regs->mepc = into->ns_mepc - 4;
+	regs->mstatus = into->ns_mstatus;
 }
 
 void init_csr_context(enclave_context *context)
@@ -376,31 +382,39 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	return avail_id;
 }
 
-uintptr_t enter_enclave(uintptr_t *regs, uintptr_t mepc)
+// regs changed to args
+uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 {
-	uintptr_t id	      = regs[A0_INDEX];
+	uintptr_t id	      = args[0];
 	enclave_context *into = &enclaves[id], *from = &enclaves[NUM_ENCLAVE];
+
+
+	sbi_printf("[enter_enclave] log1\n");
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
 		return EBI_ERROR;
 
-	memcpy_from_user(regs[A2_INDEX], into->user_param, regs[A1_INDEX],
+	sbi_printf("[enter_enclave] log2\n");
+	memcpy_from_user(args[2], into->user_param, args[1],
 			 mepc);
 
+	struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
+
+	sbi_printf("[enter_enclave] log3\n");
 	pmp_switch(into);
-	save_umode_context(from, regs);
-	save_csr_context(from, mepc);
-	restore_csr_context(into);
+	save_umode_context(from, regs); // this line is not compatible !!!
+	save_csr_context(from, mepc, regs);
+	restore_csr_context(into, regs);
 	flush_tlb();
 
 	/* User parameter */
 	/* argc and argv */
-	regs[A4_INDEX] = regs[A1_INDEX];
-	regs[A5_INDEX] = into->user_param;
+	args[4] = args[1];
+	args[5] = into->user_param;
 
-	regs[A0_INDEX] = id;
-	regs[A1_INDEX] = into->pa;
-	regs[A2_INDEX] = into->enclave_binary_size;
-	regs[A3_INDEX] = into->drv_list;
+	args[0] = id;
+	args[1] = into->pa;
+	args[2] = into->enclave_binary_size;
+	args[3] = into->drv_list;
 	into->status   = ENC_RUN;
 	from->status   = ENC_IDLE;
 	return 0;
@@ -408,68 +422,69 @@ uintptr_t enter_enclave(uintptr_t *regs, uintptr_t mepc)
 
 uintptr_t exit_enclave(uintptr_t *regs)
 {
-	uintptr_t id = regs[A0_INDEX], retval = regs[A1_INDEX];
+	// uintptr_t id = regs[A0_INDEX], retval = regs[A1_INDEX];
 
-	enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
-	if (from->status != ENC_RUN || into->status != ENC_IDLE)
-		return EBI_ERROR;
+	// enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
+	// if (from->status != ENC_RUN || into->status != ENC_IDLE)
+	// 	return EBI_ERROR;
 
-	sbi_memset((void *)from->pa, 0, EMEM_SIZE);
-	enclave_mem_free(from);
-	// clean and switch pmp
-	pmp_switch(NULL);
-	restore_umode_context(into, regs);
-	restore_csr_context(into);
+	// sbi_memset((void *)from->pa, 0, EMEM_SIZE);
+	// enclave_mem_free(from);
+	// // clean and switch pmp
+	// pmp_switch(NULL);
+	// restore_umode_context(into, regs);
+	// restore_csr_context(into);
 
-	regs[A0_INDEX] = retval;
+	// regs[A0_INDEX] = retval;
 
-	from->status = ENC_FREE;
-	into->status = ENC_RUN;
+	// from->status = ENC_FREE;
+	// into->status = ENC_RUN;
 	return EBI_OK;
 }
 // TODO: actually pause/resume can replace enter/exit
 /* pause an enclave, do not take care of ret */
 uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc)
 {
-	enclave_context *from = &(enclaves[id]);
-	// ensure one can only pause itself
-	if (from->status != ENC_RUN)
-		return EBI_ERROR;
+	// enclave_context *from = &(enclaves[id]);
+	// // ensure one can only pause itself
+	// if (from->status != ENC_RUN)
+	// 	return EBI_ERROR;
 
-	save_umode_context(from, regs);
-	save_csr_context(from, mepc);
-	// protect entire enclave section
-	pmp_switch(NULL);
-	/* Stop paging and save page table */
-	csr_write(CSR_SATP, 0x0);
-	flush_tlb();
+	// save_umode_context(from, regs);
+	// save_csr_context(from, mepc);
+	// // protect entire enclave section
+	// pmp_switch(NULL);
+	// /* Stop paging and save page table */
+	// csr_write(CSR_SATP, 0x0);
+	// flush_tlb();
 
-	from->status = ENC_IDLE;
+	// from->status = ENC_IDLE;
 	return 0;
 }
 /* resume certain enclave, must exist */
 uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs)
 {
-	enclave_context *into = &(enclaves[id]);
-	if (into->status != ENC_IDLE && into->status != ENC_LOAD)
-		return EBI_ERROR;
+	// enclave_context *into = &(enclaves[id]);
+	// if (into->status != ENC_IDLE && into->status != ENC_LOAD)
+	// 	return EBI_ERROR;
 
-	pmp_switch(into);
-	restore_csr_context(into);
-	if (into->status == ENC_IDLE)
-		restore_umode_context(into, regs);
-	else {
-		/* User parameter */
-		regs[A4_INDEX] = regs[A1_INDEX];
-		regs[A5_INDEX] = regs[A2_INDEX];
+	// pmp_switch(into);
+	// restore_csr_context(into);
+	// if (into->status == ENC_IDLE)
+	// 	restore_umode_context(into, regs);
+	// else {
+	// 	/* User parameter */
+	// 	regs[A4_INDEX] = regs[A1_INDEX];
+	// 	regs[A5_INDEX] = regs[A2_INDEX];
 
-		regs[A0_INDEX] = id;
-		regs[A1_INDEX] = into->pa;
-		regs[A2_INDEX] = into->enclave_binary_size;
-		regs[A3_INDEX] = into->drv_list;
-	}
-	into->status = ENC_RUN;
-	return id;
+	// 	regs[A0_INDEX] = id;
+	// 	regs[A1_INDEX] = into->pa;
+	// 	regs[A2_INDEX] = into->enclave_binary_size;
+	// 	regs[A3_INDEX] = into->drv_list;
+	// }
+	// into->status = ENC_RUN;
+	// return id;
+	return 0;
 }
 
 extern char _drv_console_start, _drv_console_end;

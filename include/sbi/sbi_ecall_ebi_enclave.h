@@ -163,8 +163,8 @@ typedef struct {
     char status;
 } enclave_context;
 void pmp_switch(enclave_context *context);
-extern uintptr_t create_enclave(uintptr_t* regs, uintptr_t mepc);
-extern uintptr_t enter_enclave(uintptr_t* regs, uintptr_t mepc);
+extern uintptr_t create_enclave(uintptr_t* args, uintptr_t mepc);
+extern uintptr_t enter_enclave(uintptr_t* args, uintptr_t mepc);
 extern uintptr_t exit_enclave(uintptr_t* regs);
 extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);

@@ -351,7 +351,11 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	size_t base_size     = PAGE_UP(base_end - base_start);
 	uintptr_t start_addr = context->pa + EUSR_MEM_SIZE;
 	uintptr_t drv_size   = 0;
+
+	sbi_printf("[create_enclave] before copying: @start_addr: %lx\n", *(ulong *)start_addr);
 	sbi_memcpy((void *)start_addr, (void *)base_start, base_size);
+	sbi_printf("[create_enclave] after copying: @start_addr: %lx\n", *(ulong *)start_addr);
+
 	start_addr += base_size;
 	sbi_printf("%lx\n", start_addr);
 	sbi_printf("[create_enclave] driver_bitmask: 0x%lx\n", driver_bitmask);

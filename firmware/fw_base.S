@@ -655,5 +655,5 @@ _reset_regs:
 
   .globl _base_start, _base_end
 _base_start:
-  .incbin "bbl_basedrv"
+  .incbin "emodule_base"
 _base_end:

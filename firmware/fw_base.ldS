@@ -82,8 +82,10 @@
 	PROVIDE(_fw_end = .);
 
 	/* TODO(change the lds, to insert our drivers) */
-	
+
 	.drvbase :
 	{
 		*(.drvbase)
 	}
+
+	

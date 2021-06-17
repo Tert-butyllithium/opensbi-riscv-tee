@@ -2,6 +2,8 @@
     "files.associations": {
         "riscv_asm.h": "c",
         "sbi_ecall.h": "c",
-        "sbi_error.h": "c"
+        "sbi_error.h": "c",
+        "type_traits": "c",
+        "sbi_ecall_ebi_enclave.h": "c"
     }
 }

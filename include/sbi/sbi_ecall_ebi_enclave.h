@@ -67,6 +67,7 @@
 #define T6_INDEX    31
 #define MAX_INDEX   32
 
+
 #define EBI_START   398
 #define EBI_CREATE  399
 #define EBI_ENTER   400
@@ -140,6 +141,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sbi/riscv_atomic.h>
+#include <sbi/sbi_trap.h>
 
 typedef struct {
     uintptr_t id;
@@ -165,7 +167,7 @@ typedef struct {
 void pmp_switch(enclave_context *context);
 extern uintptr_t create_enclave(uintptr_t* args, uintptr_t mepc);
 extern uintptr_t enter_enclave(uintptr_t* args, uintptr_t mepc);
-extern uintptr_t exit_enclave(uintptr_t* regs);
+extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
 extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 extern void init_enclaves(void);

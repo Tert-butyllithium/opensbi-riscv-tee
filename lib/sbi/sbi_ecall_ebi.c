@@ -2,6 +2,7 @@
 #include <sbi/sbi_ecall_interface.h>
 #include <sbi/sbi_ecall_ebi_enclave.h>
 #include <sbi/sbi_error.h>
+#include <sbi/sbi_trap.h>
 #include <sbi/sbi_version.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
@@ -17,6 +18,9 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 	int ret		    = 0;
     unsigned long core = csr_read(mhartid); // TODO(haonan): needs to verify this value is the core id;
     ulong mepc = csr_read(CSR_MEPC);
+
+    struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
+
     switch (funcid) {
     case SBI_EXT_EBI_CREATE:
         sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_CREATE\n");
@@ -37,12 +41,17 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[sbi_ecall_ebi_handler] enter\n");
         enter_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] back from enter_enclave\n");
-        sbi_printf("[sbi_ecall_ebi_handler] into->pa: 0x%lx\n", args[1]);
-
+        sbi_printf("[sbi_ecall_ebi_handler] into->pa: 0x%lx\n", regs->a1);
         return ret;
+
+    case SBI_EXT_EBI_EXIT:
+        sbi_printf("[sbi_ecall_ebi_handler] exit\n");
+        exit_enclave(regs);
+	    return ret;
     }
 
-	return ret;
+
+    return ret;
 }
 
 struct sbi_ecall_extension ecall_ebi = {

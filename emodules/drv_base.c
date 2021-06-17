@@ -72,11 +72,14 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
     uintptr_t sie = SIE_SEIE | SIE_SSIE;
     write_csr(sie, sie);
 
+    printd("[prepare_boot]\n");
+
     /* disable user interrupt, stop S mode priv */
     sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);
     sstatus |= SSTATUS_SPIE | SSTATUS_SIE;
     write_csr(sstatus, sstatus);
 
+    printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);
     /* set user entry */
     write_csr(sepc, usr_pc);
     write_csr(sscratch, usr_sp);

@@ -224,7 +224,7 @@ void save_umode_context(enclave_context *context, struct sbi_trap_regs *regs)
 	sbi_memcpy(context->umode_context, regs, INTEGER_CONTEXT_SIZE);
 }
 
-void restore_umode_context(enclave_context *context, uintptr_t *regs)
+void restore_umode_context(enclave_context *context, struct sbi_trap_regs *regs)
 {
 	sbi_memcpy(regs, context->umode_context, INTEGER_CONTEXT_SIZE);
 }
@@ -408,37 +408,41 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 
 	/* User parameter */
 	/* argc and argv */
-	args[4] = args[1];
-	args[5] = into->user_param;
+	//TODO: args --> regs
+	regs->a4 = args[1];
+	regs->a5 = into->user_param;
 
-	args[0] = id;
-	args[1] = into->pa;
-	args[2] = into->enclave_binary_size;
-	args[3] = into->drv_list;
+
+	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
+
+	regs->a0 = id;
+	regs->a1 = into->pa;
+	regs->a2 = into->enclave_binary_size;
+	regs->a3 = into->drv_list;
 	into->status   = ENC_RUN;
 	from->status   = ENC_IDLE;
-	return 0;
+	return regs->a0;
 }
 
-uintptr_t exit_enclave(uintptr_t *regs)
+uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 {
-	// uintptr_t id = regs[A0_INDEX], retval = regs[A1_INDEX];
+	uintptr_t id = regs->a0, retval = regs->a1;
 
-	// enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
-	// if (from->status != ENC_RUN || into->status != ENC_IDLE)
-	// 	return EBI_ERROR;
+	enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
+	if (from->status != ENC_RUN || into->status != ENC_IDLE)
+		return EBI_ERROR;
 
-	// sbi_memset((void *)from->pa, 0, EMEM_SIZE);
-	// enclave_mem_free(from);
-	// // clean and switch pmp
-	// pmp_switch(NULL);
-	// restore_umode_context(into, regs);
-	// restore_csr_context(into);
+	sbi_memset((void *)from->pa, 0, EMEM_SIZE);
+	enclave_mem_free(from);
+	// clean and switch pmp
+	pmp_switch(NULL);
+	restore_umode_context(into, regs);
+	restore_csr_context(into, regs);
 
-	// regs[A0_INDEX] = retval;
+	regs->a0 = retval;
 
-	// from->status = ENC_FREE;
-	// into->status = ENC_RUN;
+	from->status = ENC_FREE;
+	into->status = ENC_RUN;
 	return EBI_OK;
 }
 // TODO: actually pause/resume can replace enter/exit

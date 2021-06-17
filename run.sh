@@ -4,3 +4,5 @@ qemu-system-riscv64 -M virt -m 256M -nographic \
         -drive file=/home/prongs/src/busybox/root.bin,format=raw,id=hd0 \
         -device virtio-blk-device,drive=hd0 \
         -append "root=/dev/vda rw console=ttyS0"
+
+#mount -t proc p /proc

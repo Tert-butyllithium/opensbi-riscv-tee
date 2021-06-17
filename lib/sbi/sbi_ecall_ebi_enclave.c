@@ -201,9 +201,9 @@ void pmp_switch(enclave_context *context)
 		p1  = (context->pa + context->mem_size) >> PMP_SHIFT;
 		cfg = (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 8;
 		p2  = 0UL >> PMP_SHIFT;
-		p3  = QEMU_PHY_MEM_START >> PMP_SHIFT;
+		p3  = PHY_MEM_START >> PMP_SHIFT;
 		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-		p4 = QEMU_PHY_MEM_END >> PMP_SHIFT;
+		p4 = PHY_MEM_END >> PMP_SHIFT;
 		p5 = -1UL >> PMP_SHIFT;
 		cfg |= (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
 	}

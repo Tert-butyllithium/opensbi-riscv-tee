@@ -172,8 +172,8 @@ extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 extern void init_enclaves(void);
 
-#define QEMU_PHY_MEM_START 0x80000000UL
-#define QEMU_PHY_MEM_END 0x88000000UL
+#define PHY_MEM_START 0x40000000UL
+#define PHY_MEM_END 0x80000000UL
 
 typedef struct  {
     uintptr_t pa;

@@ -4,7 +4,7 @@
 # author: liush@allwinnertech.com
 # 
 
-make -C emodules/emodule_base/
+make -C emodules
 
 set -e
 

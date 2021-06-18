@@ -657,3 +657,11 @@ _reset_regs:
 _base_start:
   .incbin "emodule_base"
 _base_end:
+
+  .section ".drvconsole","a",@progbits
+.align 19
+
+  .globl _console_start, _console_end
+_console_start:
+  .incbin "drv_console"
+_console_end:

@@ -8,7 +8,7 @@
 void handle_interrupt(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
     printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
 
-    uintptr_t sip;
+    // uintptr_t sip, sie;
     switch (scause)
     {
     case IRQ_S_TIMER:
@@ -17,9 +17,10 @@ void handle_interrupt(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr
     case IRQ_S_SOFT:
         clear_csr(sip, SIP_SSIP);
         break;
-    // case IRQ_S_EXT:
-    //     clear_csr(sip, 1 << IRQ_S_EXT);
-    //     break;
+    case IRQ_S_EXT:
+        clear_csr(sip, 1 << IRQ_S_EXT);
+        clear_csr(sie, 1 << IRQ_S_EXT);
+        break;
     default:
         break;
     }

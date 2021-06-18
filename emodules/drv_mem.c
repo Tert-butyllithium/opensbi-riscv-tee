@@ -14,7 +14,6 @@ uintptr_t drv_start_va;
 pte* get_pte(pte* root, uintptr_t va, char alloc)
 {
     uintptr_t satp = read_csr(satp), free_page, offset = va_pa_offset();
-
     pte* pt = (pte*)((uintptr_t)root + offset);
     for (int i = 2; i > 0; i--) {
         size_t idx = EPPN(va, i);
@@ -31,28 +30,25 @@ pte* get_pte(pte* root, uintptr_t va, char alloc)
     }
     return (pte*)&pt[EPPN(va, 0)];
 }
-
 void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
     uintptr_t attr)
 {
     pte* pt;
     for (size_t i = 0; i < n_pages; i++) {
         pt = get_pte(root, va, 1);
-        *pt = PA2PTE(pa) | attr | PTE_V;
+        *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
         va += EPAGE_SIZE;
         pa += EPAGE_SIZE;
     }
 }
-
 uintptr_t ioremap(pte* root, uintptr_t pa, size_t size)
 {
     size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
-    map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages, PTE_V | PTE_W | PTE_R);
+    map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages, PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
     uintptr_t cur_addr = drv_start_va + EDRV_DRV_START;
     drv_start_va += n_pages << EPAGE_SHIFT;
     return cur_addr;
 }
-
 uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
     char id)
 {
@@ -66,12 +62,11 @@ uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
             continue;
         }
         pa = spa_get_pa_zero(id);
-        *pt = PA2PTE(pa) | attr | PTE_V;
+        *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
         va += EPAGE_SIZE;
     }
     return pa;
 }
-
 
 #define SBI_CALL(___which, ___arg0, ___arg1, ___arg2) ({			\
 	register uintptr_t a0 asm ("a0") = (uintptr_t)(___arg0);	\
@@ -239,11 +234,19 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 
     printd("sp: 0x%llx\nsatp: 0x%llx\n", drv_sp, pt_root);
     printd("usr sp: 0x%llx\n", usr_sp);
+    printd("wtf!!!!!\n");
     uintptr_t satp = pt_root >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
-    register uintptr_t a0 asm("a0") = (uintptr_t)(satp);
-    register uintptr_t a1 asm("a1") = (uintptr_t)(drv_sp);
-    register uintptr_t a2 asm("a2") = (uintptr_t)(usr_pc);
-    register uintptr_t a3 asm("a3") = (uintptr_t)(usr_sp);
+    printd("it's more convenient to debug the mv rather than page table\n");
+    asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
+    asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));
+    asm volatile ("mv a2, %0"::"r"((uintptr_t)(usr_pc)));
+    asm volatile ("mv a3, %0"::"r"((uintptr_t)(usr_sp)));
+    
+    printd("moving some regsiters...\n");
+    asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
+    asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));
+    asm volatile ("mv a2, %0"::"r"((uintptr_t)(usr_pc)));
+    asm volatile ("mv a3, %0"::"r"((uintptr_t)(usr_sp)));
 }

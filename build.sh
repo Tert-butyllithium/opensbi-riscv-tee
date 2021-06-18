@@ -4,6 +4,8 @@
 # author: liush@allwinnertech.com
 # 
 
+make -C emodules
+
 set -e
 
 TOP_DIR=$(cd $(dirname $0); pwd)

@@ -56,13 +56,14 @@ void init_other_driver() {
     for (int i = 0; i < MAX_DRV; i++) {
         if (local_init[i]) {
             drv_init_list[i] = local_init[i];
-            drv_list[i] = drv_init_list[i]();
+            // drv_list[i] = drv_init_list[i]();
         }
     }
 }
 
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
-    init_other_driver();
+    // init_other_driver();
+    // printd("[prepare_boot] 1\n");
     /* allow S mode access U mode memory */
     uintptr_t sstatus = read_csr(sstatus);
     sstatus |= SSTATUS_SUM;
@@ -72,7 +73,7 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
     uintptr_t sie = SIE_SEIE | SIE_SSIE;
     write_csr(sie, sie);
 
-    printd("[prepare_boot]\n");
+    printd("[prepare_boot] 2\n");
 
     /* disable user interrupt, stop S mode priv */
     sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);

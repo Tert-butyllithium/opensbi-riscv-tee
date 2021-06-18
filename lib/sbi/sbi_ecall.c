@@ -14,6 +14,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/riscv_encoding.h>
 #include <sbi/riscv_asm.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 
 u16 sbi_ecall_version_major(void)
 {
@@ -90,6 +91,14 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
+	static int count_ebi = 0;
+	if (regs->a7 == SBI_EXT_EBI) {
+		count_ebi++;
+		regs->a5 = (uintptr_t)regs;
+		sbi_printf("[sbi_ecall_handler] count = %d, a5 is set to 0x%lx, a6 == %lu, a7 == SBI_EXT_EBI\n",
+			count_ebi, regs->a5, func_id);
+	}
+
 	// The ecall is a syscall if it is from U-mode but a7 is not SBI_EXT_EBI
 	if (prev_mode == 0 && regs->a7 != SBI_EXT_EBI) {
 		trap.epc   = regs->mepc;
@@ -120,6 +129,9 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		ret = SBI_ENOTSUPP;
 	}
 
+	if (extension_id == SBI_EXT_EBI)
+		sbi_printf("[sbi_ecall_handler] EBI ret = %d\n", ret);
+
 	if (ret == SBI_ETRAP) {
 		trap.epc = regs->mepc;
 		sbi_trap_redirect(regs, &trap, scratch);
@@ -133,7 +145,7 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		 */
 		regs->mepc += 4;
 		regs->a0 = ret;
-		if (!is_0_1_spec)
+		if (!is_0_1_spec && extension_id != SBI_EXT_EBI)
 			regs->a1 = out_val;
 	}
 
@@ -167,6 +179,9 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
+	init_enclaves();
+	sbi_printf("############### init ecall_ebi successfully\n");
+	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);
 	if (ret)
 		return ret;
 	return 0;

@@ -28,5 +28,11 @@ SECTIONS
 		PROVIDE(_payload_end = .);
 	}
 
+
+	. = ALIGN(0x1000);
+	_enclave_start = .;
+	. = 0x41700000;
+	_enclave_end = .;
+
 	PROVIDE(_fw_reloc_end = .);
 }

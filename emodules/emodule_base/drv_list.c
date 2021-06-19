@@ -3,8 +3,9 @@
 #include "../drv_console/drv_console.h"
 
 drv_ctrl_t* init_console_driver() {
-    printd("init console driver\n");
+    printd("[init_console_driver]\n");
     // extern char _drv_enclave_console_start, _drv_enclave_console_end;
+    printd("[init_console_driver] drv_addr_list @ %p\n", drv_addr_list);
     uintptr_t drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
     uintptr_t drv_console_end = drv_addr_list[DRV_CONSOLE].drv_end;
     printd("[init_console_driver] drv_console_start: 0x%x drv_console_end: 0x%x\n", drv_console_start, drv_console_end);

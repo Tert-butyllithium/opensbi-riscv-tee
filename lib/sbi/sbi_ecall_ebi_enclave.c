@@ -491,14 +491,14 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs)
 	return 0;
 }
 
-extern char _drv_console_start, _drv_console_end;
-extern char _drv_rtc_start, _drv_rtc_end;
-// drv_addr_t bbl_addr_list[MAX_DRV] = {
-//     {(uintptr_t)&_drv_console_start, (uintptr_t)&_drv_console_end, -1},
+extern char _console_start, _console_end;
+// extern char _drv_rtc_start, _drv_rtc_end;
+drv_addr_t bbl_addr_list[MAX_DRV] = {
+    {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1}
 //     {(uintptr_t)&_drv_rtc_start, (uintptr_t)&_drv_rtc_end, -1}
-// };
+};
 
-drv_addr_t bbl_addr_list[MAX_DRV] = {};
+// drv_addr_t bbl_addr_list[MAX_DRV] = {};
 
 uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 {
@@ -506,12 +506,13 @@ uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 	int cnt			     = 0;
 	for (int i = 0; i < MAX_DRV; i++) {
 		if (bbl_addr_list[i].drv_start && (bitmask & (1 << i))) {
+			sbi_printf("[drvcpy] cnt = %d\n", cnt);
 			uintptr_t drv_start = bbl_addr_list[i].drv_start;
 			uintptr_t drv_size  = bbl_addr_list[i].drv_end -
 					     bbl_addr_list[i].drv_start;
 			drv_addr_list[cnt].drv_start = *start_addr;
 			drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
-			sbi_printf("drv %d: start = %lx end = %lx\n", i,
+			sbi_printf("[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n", i,
 				   drv_addr_list[cnt].drv_start,
 				   drv_addr_list[cnt].drv_end);
 			cnt++;

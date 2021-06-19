@@ -6,6 +6,7 @@
 #include "drv_page_pool.h"
 #include "drv_base.h"
 #include "drv_list.h"
+#include "../drv_console/drv_console.h"
 
 extern uintptr_t prog_brk;
 extern uintptr_t pt_root;
@@ -43,17 +44,18 @@ int ebi_brk(uintptr_t addr) {
 
 int ebi_write(uintptr_t fd, uintptr_t content) {
     /* stdout */
-    // SBI_CALL(EBI_FETCH, enclave_id, 0, 0);
-    // cmd_handler console_handler = (cmd_handler)drv_addr_list[DRV_CONSOLE].drv_start;
-    // if (fd == 1) {
-    //     char* str = (char*)content;
-    //     while(*str) {
-    //         console_handler(CONSOLE_CMD_PUT, *str, 0, 0);
-    //         *str = 0;
-    //         str++;
-    //     }
-    // }
-    // SBI_CALL(EBI_RELEASE, enclave_id, 0, 0);
+    printd("[ebi_write]\n");
+    // SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_FETCH);
+    cmd_handler console_handler = (cmd_handler)drv_addr_list[DRV_CONSOLE].drv_start;
+    if (fd == 1) {
+        char* str = (char*)content;
+        while(*str) {
+            console_handler(CONSOLE_CMD_PUT, *str, 0, 0);
+            *str = 0;
+            str++;
+        }
+    }
+    // SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_RELEASE);
     return 0;
 }
 

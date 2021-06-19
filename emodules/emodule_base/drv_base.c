@@ -52,7 +52,7 @@ void *  memset (void *a, int b, size_t c) {
 void init_other_driver() {
     drv_initer local_init[64] = {init_console_driver};
                                 //  init_rtc_driver};
-    drv_initer local_init[64] = {0};
+    // drv_initer local_init[64] = {0};
     for (int i = 0; i < MAX_DRV; i++) {
         if (local_init[i]) {
             drv_init_list[i] = local_init[i];
@@ -62,7 +62,7 @@ void init_other_driver() {
 }
 
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
-    // init_other_driver();
+    init_other_driver();
     // printd("[prepare_boot] 1\n");
     /* allow S mode access U mode memory */
     uintptr_t sstatus = read_csr(sstatus);

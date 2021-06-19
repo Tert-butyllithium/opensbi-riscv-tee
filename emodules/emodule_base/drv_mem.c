@@ -139,10 +139,12 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     printd("[init_mem] root: 0x%x\n", pt_root);
     /* Load ELF running inside enclave */
     uintptr_t usr_pc = elf_load(pt_root, mem_start, USR, &prog_brk);
-    if (drv_list != 0 && drv_list[cnt].drv_start != 0) {
+    
+    if (drv_list != 0) {
+    // if (drv_list != 0 && drv_list[cnt].drv_start != 0) {
         uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
         uintptr_t drv_pa_end = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
-        printd("%x %x\n", drv_pa_end, drv_pa_start);
+        printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
         map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, (drv_pa_end - drv_pa_start) >> EPAGE_SHIFT, PTE_V | PTE_R | PTE_X);
     }
     /* base driver remaining mem */

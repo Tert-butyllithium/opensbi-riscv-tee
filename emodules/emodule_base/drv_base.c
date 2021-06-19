@@ -50,13 +50,13 @@ void *  memset (void *a, int b, size_t c) {
 }
 
 void init_other_driver() {
-    // drv_initer local_init[64] = {init_console_driver,
-    //                              init_rtc_driver};
+    drv_initer local_init[64] = {init_console_driver};
+                                //  init_rtc_driver};
     drv_initer local_init[64] = {0};
     for (int i = 0; i < MAX_DRV; i++) {
         if (local_init[i]) {
             drv_init_list[i] = local_init[i];
-            // drv_list[i] = drv_init_list[i]();
+            drv_list[i] = drv_init_list[i]();
         }
     }
 }

@@ -1,29 +1,30 @@
 #include "drv_list.h"
 #include "drv_page_pool.h"
+#include "../drv_console/drv_console.h"
 
-// drv_ctrl_t* init_console_driver() {
-//     printd("init console driver\n");
-//     // extern char _drv_enclave_console_start, _drv_enclave_console_end;
-//     uintptr_t drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
-//     uintptr_t drv_console_end = drv_addr_list[DRV_CONSOLE].drv_end;
-//     printd("%x %x\n", drv_console_start, drv_console_end);
+drv_ctrl_t* init_console_driver() {
+    printd("init console driver\n");
+    // extern char _drv_enclave_console_start, _drv_enclave_console_end;
+    uintptr_t drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
+    uintptr_t drv_console_end = drv_addr_list[DRV_CONSOLE].drv_end;
+    printd("[init_console_driver] drv_console_start: 0x%x drv_console_end: 0x%x\n", drv_console_start, drv_console_end);
 
-//     uintptr_t console_drv_size = drv_console_end - drv_console_start;
-//     size_t n_console_drv_pages = (PAGE_UP(console_drv_size)) >> EPAGE_SHIFT;
-//     map_page((pte *)pt_root, drv_console_start, drv_console_start - EDRV_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
+    uintptr_t console_drv_size = drv_console_end - drv_console_start;
+    size_t n_console_drv_pages = (PAGE_UP(console_drv_size)) >> EPAGE_SHIFT;
+    map_page((pte *)pt_root, drv_console_start, drv_console_start - EDRV_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
 
-//     cmd_handler console_handler = (cmd_handler)drv_console_start;
+    cmd_handler console_handler = (cmd_handler)drv_console_start;
 
-//     drv_ctrl_t* console_ctrl = (drv_ctrl_t*)console_handler(QUERY_INFO, 0, 0, 0);
-//     printd("%x\n", console_ctrl->reg_addr);
+    drv_ctrl_t* console_ctrl = (drv_ctrl_t*)console_handler(QUERY_INFO, 0, 0, 0);
+    printd("%x\n", console_ctrl->reg_addr);
     
-//     uintptr_t console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-//     printd("%x\n", console_va);
-//     console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
-//     console_handler(CONSOLE_CMD_PUT, 'c', 0,0);
-//     console_handler(CONSOLE_CMD_PUT, '\n', 0,0);
-//     return console_ctrl;
-// }
+    uintptr_t console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
+    printd("%x\n", console_va);
+    console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
+    console_handler(CONSOLE_CMD_PUT, 'c', 0,0);
+    console_handler(CONSOLE_CMD_PUT, '\n', 0,0);
+    return console_ctrl;
+}
 
 // drv_ctrl_t* init_rtc_driver() {
 //     printd("init rtc driver\n");

@@ -1,7 +1,7 @@
 CC = ../../../tools/toolchain/riscv64-glibc-gcc-thead_20200702/bin/riscv64-unknown-linux-gnu-gcc 
 OBJCOPY = ../../../tools/toolchain/riscv64-glibc-gcc-thead_20200702/bin/riscv64-unknown-linux-gnu-objcopy
 
-CFLAGS = -nostdlib -static -mcmodel=medany -g
+CFLAGS = -nostdlib -static -mcmodel=medany -Werror -g
 
 link_script = drv_base.lds
 headers = drv_base.h drv_elf.h drv_handler.h drv_list.h drv_mem.h drv_page_pool.h drv_syscall.h drv_util.h

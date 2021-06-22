@@ -34,8 +34,6 @@ pte* get_pte(pte* root, uintptr_t va, char alloc)
 void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
     uintptr_t attr)
 {
-    static int cnt = 0;
-    cnt ++;
     pte* pt;
     size_t i;
     for (i  = 0; i < n_pages; i++) {
@@ -43,8 +41,6 @@ void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
         va += EPAGE_SIZE;
         pa += EPAGE_SIZE;
-        if(cnt %100 == 0)
-            printd("[map_page] pa:%p ->va:%p \n", pa, va);
     }
 }
 uintptr_t ioremap(pte* root, uintptr_t pa, size_t size)
@@ -66,10 +62,11 @@ uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
         if ((*pt) & PTE_V) {
             /* Already mapped */
             /* TODO: check if attr are the same */
-            continue;
+            goto next_page;
         }
         pa = spa_get_pa_zero(id);
         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
+next_page:;
         va += EPAGE_SIZE;
     }
     return pa;
@@ -121,8 +118,8 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         cnt++;
     }
 
-    drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list + EDRV_VA_PA_OFFSET);
-    printd("\033[1;33m drv_addr_list=0x%p drv_list=0x%p\n\033[0m",drv_addr_list, drv_list);
+    drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list);
+    printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
     uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
@@ -155,7 +152,9 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
         uintptr_t drv_pa_end = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
         printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
-        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, PAGE_UP((drv_pa_end - drv_pa_start)), PTE_V | PTE_R | PTE_X);
+        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, (PAGE_UP(drv_pa_end - drv_pa_start)>>EPAGE_SHIFT), PTE_V | PTE_R | PTE_X);
+        printd("\033[1;33mdrv: 0x%x - 0x%x -> 0x%x\n\033[0m", drv_pa_start,
+        drv_pa_end, __pa(drv_pa_start));
     }
     /* base driver remaining mem */
     /* thus easier manupilating satp */
@@ -254,6 +253,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     // enclave_id = 114514;
     // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
 
+    printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

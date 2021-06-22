@@ -65,7 +65,7 @@ uintptr_t spa_get_zero(char id) {
         printd("OUT OF PAGE DRV\n");
     else if (page == -1 && id == USR)
         printd("OUT OF PAGE USR\n");
-    memset((char*)page, 0, EPAGE_SIZE);
+    my_memset((char*)page, 0, EPAGE_SIZE);
     return page;
 }
 
@@ -75,7 +75,7 @@ uintptr_t spa_get_pa(char id) {
 
 uintptr_t spa_get_pa_zero(char id) {
     uintptr_t page = __spa_get(page_pools + id);
-    memset((char*)page, 0, EPAGE_SIZE);
+    my_memset((char*)page, 0, EPAGE_SIZE);
     return page - va_pa_offset();
 }
 

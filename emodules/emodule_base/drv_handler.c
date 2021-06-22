@@ -6,15 +6,16 @@
 #include "drv_base.h"
 
 void handle_interrupt(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-    printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
 
     // uintptr_t sip, sie;
     switch (scause)
     {
     case IRQ_S_TIMER:
+        printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
         clear_csr(sip, SIP_STIP);
         break;
     case IRQ_S_SOFT:
+        printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
         clear_csr(sip, SIP_SSIP);
         break;
     case IRQ_S_EXT:

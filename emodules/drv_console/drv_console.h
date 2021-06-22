@@ -12,5 +12,6 @@
 #define CONSOLE_CMD_DESTORY 3
 #define CONSOLE_REG_ADDR    0x02500000
 #define CONSOLE_REG_SIZE    0x400
+#define SUNXI_UART_BASE     0x02500000
 
 #endif

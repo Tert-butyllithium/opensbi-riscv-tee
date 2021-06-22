@@ -18,11 +18,11 @@ uintptr_t uart16550_clock = 3686400;   // a "common" base clock
 #define UART_REG_FCR       2    // fifo control register
 #define UART_REG_LCR       3    // line control register
 #define UART_REG_MCR       4    // modem control register
-#define UART_REG_LSR       5    // line status register
+#define UART_REG_LSR       0x1f    // line status register
 #define UART_REG_MSR       6    // modem status register
 #define UART_REG_SCR       7    // scratch register
-#define UART_REG_STATUS_RX 0x01
-#define UART_REG_STATUS_TX 0x20
+#define UART_REG_STATUS_RX 0x04
+#define UART_REG_STATUS_TX 0x02
 
 
 // We cannot use the word DEFAULT for a parameter that cannot be overridden due to -Werror

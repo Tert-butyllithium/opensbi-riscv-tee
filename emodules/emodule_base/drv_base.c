@@ -9,7 +9,7 @@
 uintptr_t enclave_id;
 drv_ctrl_t* drv_list[MAX_DRV] = {0};
 drv_initer drv_init_list[MAX_DRV];
-drv_addr_t* drv_addr_list;
+extern drv_addr_t* drv_addr_list;
 
 uintptr_t init_usr_stack(uintptr_t usr_sp) {
     PUSH(usr_sp, 0);
@@ -50,18 +50,38 @@ void *  memset (void *a, int b, size_t c) {
 }
 
 void init_other_driver() {
-    drv_initer local_init[64] = {init_console_driver};
-                                //  init_rtc_driver};
-    // drv_initer local_init[64] = {0};
-    for (int i = 0; i < MAX_DRV; i++) {
-        if (local_init[i]) {
-            drv_init_list[i] = local_init[i];
-            drv_list[i] = drv_init_list[i]();
-        }
-    }
+    // drv_initer local_init[64] = {init_console_driver};
+    //                             //  init_rtc_driver};
+    // // drv_initer local_init[64] = {0};
+    // for (int i = 0; i < MAX_DRV; i++) {
+    //     if (local_init[i]) {
+    //         drv_init_list[i] = local_init[i];
+    //         drv_list[i] = drv_init_list[i]();
+    //     }
+    // }
+    drv_list[0] = init_console_driver();
 }
 
+#define SBI_ECALL(__num, __a0, __a1, __a2)                                    \
+	({                                                                    \
+		register unsigned long a0 asm("a0") = (unsigned long)(__a0);  \
+		register unsigned long a1 asm("a1") = (unsigned long)(__a1);  \
+		register unsigned long a2 asm("a2") = (unsigned long)(__a2);  \
+		register unsigned long a7 asm("a7") = (unsigned long)(__num); \
+		asm volatile("ecall"                                          \
+			     : "+r"(a0)                                       \
+			     : "r"(a1), "r"(a2), "r"(a7)                      \
+			     : "memory");                                     \
+		a0;                                                           \
+	})
+
+
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
+    printd("[prepare_boot] drv_list @ %p at %p\n", drv_list, &drv_list);
+    printd("\033[0;32m[prepare_boot] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
+    printd("\033[0;32m[prepare_boot] drv_addr_list @ 0x%p at 0x%p\n\033[0m", drv_addr_list, &drv_addr_list);
+    SBI_ECALL(0xdeadbeaf,0x40706408,0,0);
+    // printd("[prepare_boot] 0x%lx\n",*(unsigned long * )0x40706408);
     init_other_driver();
     // printd("[prepare_boot] 1\n");
     /* allow S mode access U mode memory */

@@ -41,6 +41,7 @@ extern struct sbi_ecall_extension ecall_ipi;
 extern struct sbi_ecall_extension ecall_srst;
 extern struct sbi_ecall_extension ecall_vendor;
 extern struct sbi_ecall_extension ecall_ebi;
+extern struct sbi_ecall_extension ecall_debug;
 
 u16 sbi_ecall_version_major(void);
 

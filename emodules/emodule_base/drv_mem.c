@@ -15,7 +15,8 @@ pte* get_pte(pte* root, uintptr_t va, char alloc)
 {
     uintptr_t satp = read_csr(satp), free_page, offset = va_pa_offset();
     pte* pt = (pte*)((uintptr_t)root + offset);
-    for (int i = 2; i > 0; i--) {
+    int i;
+    for (i = 2; i > 0; i--) {
         size_t idx = EPPN(va, i);
         if (!(pt[idx] & PTE_V)) {
             if (alloc) {
@@ -33,12 +34,17 @@ pte* get_pte(pte* root, uintptr_t va, char alloc)
 void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
     uintptr_t attr)
 {
+    static int cnt = 0;
+    cnt ++;
     pte* pt;
-    for (size_t i = 0; i < n_pages; i++) {
+    size_t i;
+    for (i  = 0; i < n_pages; i++) {
         pt = get_pte(root, va, 1);
         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
         va += EPAGE_SIZE;
         pa += EPAGE_SIZE;
+        if(cnt %100 == 0)
+            printd("[map_page] pa:%p ->va:%p \n", pa, va);
     }
 }
 uintptr_t ioremap(pte* root, uintptr_t pa, size_t size)
@@ -54,7 +60,8 @@ uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
 {
     pte* pt;
     uintptr_t pa;
-    for (size_t i = 0; i < n_pages; i++) {
+    size_t i;
+    for (i = 0; i < n_pages; i++) {
         pt = get_pte(root, va, 1);
         if ((*pt) & PTE_V) {
             /* Already mapped */
@@ -67,6 +74,8 @@ uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
     }
     return pa;
 }
+
+#define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
 
 #define SBI_CALL(___which, ___arg0, ___arg1, ___arg2) ({			\
 	register uintptr_t a0 asm ("a0") = (uintptr_t)(___arg0);	\
@@ -104,22 +113,23 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     // printd("Driver console PA: 0x%08x\n", drv_console_start);
 
     int cnt = 0;
-    printd("[init_mem] drv_list[0].drv_start = 0x%x\n", drv_list[0].drv_start);
+    printd("drv_list[0].drv_start = 0x%x\n", drv_list[0].drv_start);
     while (drv_list[cnt].drv_start) {
-        printd("[init_mem] drv_list[%d].drv_start: 0x%x\n", cnt, drv_list[cnt].drv_start);
         drv_list[cnt].drv_start += EDRV_VA_PA_OFFSET;
         drv_list[cnt].drv_end += EDRV_VA_PA_OFFSET;
+        printd("[init_mem] drv_list[%d].drv_start: 0x%x, drv_end: 0x%x\n", cnt, drv_list[cnt].drv_start, drv_list[cnt].drv_end);
         cnt++;
     }
-    printd("DONE\n");
-    drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list + EDRV_VA_PA_OFFSET);
 
+    drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list + EDRV_VA_PA_OFFSET);
+    printd("\033[1;33m drv_addr_list=0x%p drv_list=0x%p\n\033[0m",drv_addr_list, drv_list);
     uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
     printd("[init_mem] base_avail_start = 0x%x, base_avail_end = 0x%x\n", base_avail_start, base_avail_end);
     printd("[init_mem] base_avail_size = %x\n", base_avail_size);
     printd("[init_mem] mem_start = 0x%x\n", mem_start);
+
     spa_init(base_avail_start, base_avail_size, DRV);
     printd("hello1\n");
     printd("%x\n", base_avail_start);
@@ -145,20 +155,20 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
         uintptr_t drv_pa_end = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
         printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
-        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, (drv_pa_end - drv_pa_start) >> EPAGE_SHIFT, PTE_V | PTE_R | PTE_X);
+        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, PAGE_UP((drv_pa_end - drv_pa_start)), PTE_V | PTE_R | PTE_X);
     }
     /* base driver remaining mem */
     /* thus easier manupilating satp */
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + usr_avail_start, usr_avail_start,
         PAGE_DOWN(usr_avail_size) >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
-    printd("usr.remain: 0x%x -> 0x%x\n", usr_avail_start,
-        usr_avail_size + PAGE_DOWN(usr_avail_size));
+    printd("usr.remain: 0x%x - 0x%x -> 0x%x\n", usr_avail_start,
+        usr_avail_start + PAGE_DOWN(usr_avail_size), __pa(usr_avail_start));
 
     /* user stack R/W */
     size_t n_user_stack_pages = (PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 1;
     // printd("we need %d pages\n", n_user_stack_pages);
     uintptr_t usr_sp = prog_brk + EUSR_STACK_SIZE * EUSR_HEAP_STACK_RATIO;
-    // printd("user stack: 0x%x -> 0x%x\n", usr_sp, usr_sp + EUSR_STACK_SIZE);
+    // printd("user stack: 0x%x - 0x%x -> 0x%x\n", usr_sp, usr_sp + EUSR_STACK_SIZE);
     alloc_page((pte*)pt_root, usr_sp, n_user_stack_pages,
         PTE_V | PTE_W | PTE_R | PTE_U, USR);
     usr_sp += EUSR_STACK_SIZE;
@@ -172,7 +182,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     size_t n_base_text_pages = (PAGE_UP(text_size)) >> EPAGE_SHIFT;
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + text_start, text_start,
         n_base_text_pages, PTE_V | PTE_X | PTE_R);
-    printd(".text: 0x%x -> 0x%x\n", text_start, text_end);
+    printd(".text: 0x%x - 0x%x -> 0x%x\n", text_start, text_end, __pa(text_start));
 
     /* base driver .init.data section */
     extern char _init_data_start, _init_data_end;
@@ -182,7 +192,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     size_t n_base_init_data_pages = (PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + init_data_start, init_data_start,
         n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
-    printd(".init.data: 0x%x -> 0x%x\n", init_data_start, init_data_end);
+    printd(".init.data: 0x%x - 0x%x -> 0x%x\n", init_data_start, init_data_end, __pa(init_data_start));
 
     /* base driver .data section */
     extern char _data_start, _data_end;
@@ -192,7 +202,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     size_t n_base_data_pages = (PAGE_UP(data_size)) >> EPAGE_SHIFT;
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + data_start, data_start,
         n_base_data_pages, PTE_V | PTE_W | PTE_R);
-    printd(".data: 0x%x -> 0x%x\n", data_start, data_end);
+    printd(".data: 0x%x - 0x%x -> 0x%x\n", data_start, data_end,__pa(data_start));
 
     /* base driver .rodata section */
     extern char _rodata_start, _rodata_end;
@@ -202,7 +212,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     size_t n_base_rodata_pages = (PAGE_UP(rodata_size)) >> EPAGE_SHIFT;
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + rodata_start, rodata_start,
         n_base_rodata_pages, PTE_V | PTE_R);
-    printd(".rodata: 0x%x -> 0x%x\n", rodata_start, rodata_end);
+    printd(".rodata: 0x%x - 0x%x -> 0x%x\n", rodata_start, rodata_end, __pa(rodata_start));
 
     /* base driver .bss section */
     extern char _bss_start, _bss_end;
@@ -212,7 +222,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     size_t n_base_bss_pages = (PAGE_UP(bss_size)) >> EPAGE_SHIFT;
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + bss_start, bss_start,
         n_base_bss_pages, PTE_V | PTE_W | PTE_R);
-    printd(".bss: 0x%x -> 0x%x\n", bss_start, bss_end);
+    printd(".bss: 0x%x - 0x%x -> 0x%x\n", bss_start, bss_end, __pa(bss_start));
 
     volatile uintptr_t a7;
     asm volatile ("mv %0, a7"::"r"(a7));
@@ -223,8 +233,8 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + base_avail_start,
         base_avail_start, PAGE_DOWN(base_avail_size) >> EPAGE_SHIFT,
         PTE_V | PTE_W | PTE_R);
-    printd("drv.remain: 0x%x -> 0x%x\n", base_avail_start,
-    base_avail_start+PAGE_DOWN(base_avail_size));
+    printd("drv.remain: 0x%x - 0x%x -> 0x%x\n", base_avail_start,
+    base_avail_start+PAGE_DOWN(base_avail_size), __pa(base_avail_start));
 
     /* base stack R/W */
     size_t n_base_stack_pages = (PAGE_UP(EDRV_STACK_SIZE)) >> EPAGE_SHIFT;
@@ -240,13 +250,11 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     uintptr_t satp = pt_root >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
-    printd("it's more convenient to debug the mv rather than page table\n");
-    asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
-    asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));
-    asm volatile ("mv a2, %0"::"r"((uintptr_t)(usr_pc)));
-    asm volatile ("mv a3, %0"::"r"((uintptr_t)(usr_sp)));
-    
-    printd("moving some regsiters...\n");
+    // printd("[init_mem] drv_list_addr: 0x%p at 0x%p\n",drv_addr_list, &drv_addr_list);
+    // enclave_id = 114514;
+    // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
+
+
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));
     asm volatile ("mv a2, %0"::"r"((uintptr_t)(usr_pc)));

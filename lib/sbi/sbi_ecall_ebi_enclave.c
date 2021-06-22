@@ -414,6 +414,7 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 
 
 	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
+	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
 
 	regs->a0 = id;
 	regs->a1 = into->pa;
@@ -502,7 +503,7 @@ drv_addr_t bbl_addr_list[MAX_DRV] = {
 
 uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 {
-	drv_addr_t drv_addr_list[64] = {};
+	drv_addr_t _local_drv_addr_list[64] = {};
 	int cnt			     = 0;
 	for (int i = 0; i < MAX_DRV; i++) {
 		if (bbl_addr_list[i].drv_start && (bitmask & (1 << i))) {
@@ -510,20 +511,20 @@ uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 			uintptr_t drv_start = bbl_addr_list[i].drv_start;
 			uintptr_t drv_size  = bbl_addr_list[i].drv_end -
 					     bbl_addr_list[i].drv_start;
-			drv_addr_list[cnt].drv_start = *start_addr;
-			drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
+			_local_drv_addr_list[cnt].drv_start = *start_addr;
+			_local_drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
 			sbi_printf("[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n", i,
-				   drv_addr_list[cnt].drv_start,
-				   drv_addr_list[cnt].drv_end);
+				   _local_drv_addr_list[cnt].drv_start,
+				   _local_drv_addr_list[cnt].drv_end);
 			cnt++;
 			sbi_memcpy((void *)(*start_addr), (void *)drv_start,
 			       drv_size);
 			*start_addr += drv_size;
 		}
 	}
-	sbi_memcpy((void *)*start_addr, (void *)drv_addr_list,
-	       sizeof(drv_addr_list));
-	return sizeof(drv_addr_list);
+	sbi_memcpy((void *)*start_addr, (void *)_local_drv_addr_list,
+	       sizeof(_local_drv_addr_list));
+	return sizeof(_local_drv_addr_list);
 }
 
 char drvfetch(int enclave_id, int driver_id)

@@ -1,5 +1,5 @@
-CC = ../../../tools/toolchain/riscv64-glibc-gcc-thead_20200702/bin/riscv64-unknown-linux-gnu-gcc 
-OBJCOPY = ../../../tools/toolchain/riscv64-glibc-gcc-thead_20200702/bin/riscv64-unknown-linux-gnu-objcopy
+CC = riscv64-unknown-linux-gnu-gcc 
+OBJCOPY = riscv64-unknown-linux-gnu-objcopy
 
 CFLAGS = -nostdlib -static -mcmodel=medany -g
 

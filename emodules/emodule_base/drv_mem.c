@@ -106,7 +106,6 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     printd("base_size: 0x%x\n", base_size);
 
     // extern char _drv_console_start;
-    // uintptr_t drv_console_start = (uintptr_t)&_drv_console_start;
     // printd("Driver console PA: 0x%08x\n", drv_console_start);
 
     int cnt = 0;
@@ -119,6 +118,8 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     }
 
     drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list);
+    drv_addr_list = (void*)(EDRV_VA_PA_OFFSET + (void*) drv_addr_list);
+    
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
     uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
@@ -152,7 +153,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
         uintptr_t drv_pa_end = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
         printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
-        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, (PAGE_UP(drv_pa_end - drv_pa_start)>>EPAGE_SHIFT), PTE_V | PTE_R | PTE_X);
+        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, (PAGE_UP(drv_pa_end - drv_pa_start)), PTE_V | PTE_R | PTE_X);
         printd("\033[1;33mdrv: 0x%x - 0x%x -> 0x%x\n\033[0m", drv_pa_start,
         drv_pa_end, __pa(drv_pa_start));
     }
@@ -252,8 +253,9 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     // printd("[init_mem] drv_list_addr: 0x%p at 0x%p\n",drv_addr_list, &drv_addr_list);
     // enclave_id = 114514;
     // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
-
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
+
+    SBI_CALL5(0xdeadbeaf,drv_addr_list,0,0,0);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

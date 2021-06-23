@@ -79,9 +79,9 @@ void init_other_driver()
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp)
 {
 	printd("[prepare_boot] drv_list @ %p at %p\n", drv_list, &drv_list);
-	printd("\033[0;32m[prepare_boot] enclave_id @ 0x%lx at 0x%p\n\033[0m",
+	printd("\033[0;32m[prepare_boot] enclave_id @ 0x%lx at %p\n\033[0m",
 	       enclave_id, &enclave_id);
-	printd("\033[0;32m[prepare_boot] drv_addr_list @ 0x%p at 0x%p\n\033[0m",
+	printd("\033[0;32m[prepare_boot] drv_addr_list @ %p at %p\n\033[0m",
 	       drv_addr_list, &drv_addr_list);
 	SBI_ECALL(0xdeadbeaf, &drv_addr_list, drv_addr_list, 0);
 	printd("[prepare_boot] 0x%lx\n", *(unsigned long *)0xc0706408);

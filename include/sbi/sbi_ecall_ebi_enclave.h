@@ -131,7 +131,7 @@
 #define NUM_OF_PAGE(size)	\
         (((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))
 
-#define EDRV_PA_START    0x40000000
+#define EDRV_PA_START    0x80000000
 #define EDRV_VA_START    0xC0000000
 #define EDRV_DRV_START   0xD0000000
 #define EDRV_VA_PA_OFFSET     (EDRV_VA_START - EDRV_PA_START)
@@ -172,7 +172,7 @@ extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 extern void init_enclaves(void);
 
-#define PHY_MEM_START 0x40000000UL
+#define PHY_MEM_START 0x80000000UL
 #define PHY_MEM_END 0x80000000UL
 
 typedef struct  {

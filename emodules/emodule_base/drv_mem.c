@@ -236,15 +236,14 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 
     printd("sp: 0x%llx\nsatp: 0x%llx\n", drv_sp, pt_root);
     printd("usr sp: 0x%llx\n", usr_sp);
-    printd("wtf!!!!!\n");
     uintptr_t satp = pt_root >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
-    printd("it's more convenient to debug the mv rather than page table\n");
-    asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
-    asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));
-    asm volatile ("mv a2, %0"::"r"((uintptr_t)(usr_pc)));
-    asm volatile ("mv a3, %0"::"r"((uintptr_t)(usr_sp)));
+    // printd("it's more convenient to debug the mv rather than page table\n");
+    // asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
+    // asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));
+    // asm volatile ("mv a2, %0"::"r"((uintptr_t)(usr_pc)));
+    // asm volatile ("mv a3, %0"::"r"((uintptr_t)(usr_sp)));
     
     printd("moving some regsiters...\n");
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));

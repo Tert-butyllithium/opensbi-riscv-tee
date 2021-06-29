@@ -12,9 +12,9 @@
 #define SSIE_SHIFT 1
 #define STIE_SHIFT 5
 #define SEIE_SHIFT 9
-#define SIE_SEIE   (1 << SEIE_SHIFT)
-#define SIE_SSIE   (1 << SSIE_SHIFT)
-#define SIE_STIE   (1 << STIE_SHIFT)
+#define SIE_SEIE (1 << SEIE_SHIFT)
+#define SIE_SSIE (1 << SSIE_SHIFT)
+#define SIE_STIE (1 << STIE_SHIFT)
 
 extern uintptr_t enclave_id;
 #endif

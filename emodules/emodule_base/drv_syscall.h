@@ -47,8 +47,8 @@
 #include <sys/time.h>
 #include "enclave.h"
 
-#define EFAULT              -1
-#define ERR_DRV_NOT_FND     -111
+#define EFAULT -1
+#define ERR_DRV_NOT_FND -111
 
 int ebi_fstat(uintptr_t fd, uintptr_t sstat);
 int ebi_brk(uintptr_t addr);

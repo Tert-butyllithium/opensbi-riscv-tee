@@ -95,7 +95,8 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	if (regs->a7 == SBI_EXT_EBI) {
 		count_ebi++;
 		regs->a5 = (uintptr_t)regs;
-		sbi_printf("[sbi_ecall_handler] count = %d, a5 is set to 0x%lx, a6 == %lu, a7 == SBI_EXT_EBI\n",
+		sbi_printf(
+			"[sbi_ecall_handler] count = %d, a5 is set to 0x%lx, a6 == %lu, a7 == SBI_EXT_EBI\n",
 			count_ebi, regs->a5, func_id);
 	}
 

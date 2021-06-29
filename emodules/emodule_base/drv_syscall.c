@@ -71,7 +71,7 @@ int ebi_close(uintptr_t fd)
 
 int ebi_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-	// if (!drv_list[DRV_RTC]) return ERR_DRV_NOT_FND;
+	// if (!peri_reg_list[DRV_RTC]) return ERR_DRV_NOT_FND;
 	// if (!tv) return EFAULT;
 
 	// cmd_handler rtc_handler = (cmd_handler)drv_addr_list[DRV_RTC].drv_start;

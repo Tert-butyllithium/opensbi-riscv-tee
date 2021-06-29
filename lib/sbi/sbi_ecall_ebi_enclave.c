@@ -335,15 +335,15 @@ void init_enclaves(void)
 
 uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 {
-	uintptr_t addr;
-
-	addr			 = args[0];
-	size_t binary_size	 = args[1];
+	uintptr_t payload_addr;
+	payload_addr		 = args[0];
+	size_t payload_size	 = args[1];
 	uintptr_t driver_bitmask = args[2];
 
-	sbi_printf("[create_enclave] user_payload_addr = 0x%lx\n", addr);
+	sbi_printf("[create_enclave] user_payload_addr = 0x%lx\n",
+		   payload_addr);
 
-	if (PAGE_UP(binary_size) > EMEM_SIZE)
+	if (PAGE_UP(payload_size) > EMEM_SIZE)
 		return EBI_ERROR;
 
 	sbi_printf("[create_enclave] log1\n");
@@ -362,35 +362,34 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 		return EBI_ERROR;
 	sbi_printf("[create_enclave] log3\n");
 
-	uintptr_t base_start, base_end;
-	base_start	     = (uintptr_t)&_base_start;
-	base_end	     = (uintptr_t)&_base_end;
-	size_t base_size     = PAGE_UP(base_end - base_start);
-	uintptr_t start_addr = context->pa + EUSR_MEM_SIZE;
-	uintptr_t drv_size   = 0;
+	uintptr_t base_module_copy_start, base_module_copy_end;
+	base_module_copy_start = (uintptr_t)&_base_start;
+	base_module_copy_end	       = (uintptr_t)&_base_end;
+	size_t base_module_size = PAGE_UP(base_module_copy_end - base_module_copy_start);
+	uintptr_t base_module_start = context->pa + EUSR_MEM_SIZE;
+	uintptr_t extra_module_size = 0;
 
-	sbi_printf("[create_enclave] before copying: @start_addr: %lx\n",
-		   *(ulong *)start_addr);
-	sbi_memcpy((void *)start_addr, (void *)base_start, base_size);
-	sbi_printf("[create_enclave] after copying: @start_addr: %lx\n",
-		   *(ulong *)start_addr);
+	// base module copying
+	sbi_printf(
+		"[create_enclave] copying base module: from 0x%lx copy to 0x%lx\n",
+		base_module_copy_start, base_module_start);
+	sbi_memcpy((void *)base_module_start, (void *)base_module_copy_start,
+		   base_module_size);
 
-	start_addr += base_size;
-	sbi_printf("%lx\n", start_addr);
-	sbi_printf("[create_enclave] driver_bitmask: 0x%lx\n", driver_bitmask);
+	// extra modules copying according to the module list
+	sbi_printf("[create_enclave] copying extra modules: bitmask: 0x%lx\n", driver_bitmask);
+	base_module_start += base_module_size;
 	if (driver_bitmask != 0)
-		drv_size = drvcpy(&start_addr, driver_bitmask);
+		extra_module_size = drvcpy(&base_module_start, driver_bitmask);
 	else
-		start_addr = 0;
-	sbi_printf("[create_enclave] start_addr: %lx\n", start_addr);
-	sbi_printf("[create_enclave] base_start: %lx\n", base_start);
-	sbi_printf("[create_enclave] enclave pa = %lx\n", context->pa);
-	memcpy_from_user(addr, context->pa, binary_size, mepc);
+		base_module_start = 0;
+	sbi_printf("[create_enclave] enclave pa = 0x%lx\n", context->pa);
+	memcpy_from_user(payload_addr, context->pa, payload_size, mepc);
 	init_csr_context(context);
 
-	context->enclave_binary_size = binary_size;
-	context->drv_list	     = start_addr;
-	context->user_param	     = start_addr + drv_size;
+	context->enclave_binary_size = payload_size;
+	context->drv_list	     = base_module_start;
+	context->user_param	     = base_module_start + extra_module_size;
 	args[0]			     = avail_id;
 	return avail_id;
 }

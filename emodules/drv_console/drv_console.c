@@ -57,16 +57,22 @@ int sunxi_uart_getc(void)
 
 int sunxi_uart_init(unsigned long base)
 {
-  SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
-	sunxi_uart = (volatile void *)base;
+  // SBI_ECALL(7, '\n', 0, 0);
+  // SBI_ECALL(7, 'q', 0, 0);
+  // SBI_ECALL(7, '\n', 0, 0);
+  // SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
+	sunxi_uart = (volatile uint32_t*)base;
+  printd("[sunxi_uart_init] sunxi_uart = 0x%llx, @ 0x%llx\n", sunxi_uart, &sunxi_uart);
 	return 0;
 }
 
 void sunxi_uart_putc(char ch)
 {
-	// while ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_NF) == 0);
+  static int count = 0;
+	while ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_NF) == 0) count++;
 	sunxi_uart[SUNXI_UART_THR] = ch;
-  SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
+  // SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
+  // printd("%c",ch);
 }
 
 

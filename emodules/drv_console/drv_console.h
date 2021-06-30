@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include "../util/drv_ctrl.h"
+#include "../emodule_base/drv_util.h"
 
 #define CONSOLE_CMD_INIT    0
 #define CONSOLE_CMD_PUT     1

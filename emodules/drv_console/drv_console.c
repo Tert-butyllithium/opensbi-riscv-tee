@@ -33,28 +33,6 @@ drv_ctrl_t ctrl = {
     .reg_size = CONSOLE_REG_SIZE,
   };
 
-
-int sunxi_uart_getc(void)
-{
-	if ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_RFNE) != 0)
-		return sunxi_uart[SUNXI_UART_RBR];
-	else
-		return -1;
-}
-
-int sunxi_uart_init(unsigned long base)
-{
-	sunxi_uart = (volatile void *)base;
-	return 0;
-}
-
-void sunxi_uart_putc(char ch)
-{
-	while ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_NF) == 0);
-	sunxi_uart[SUNXI_UART_THR] = ch;
-}
-
-
 #define SBI_ECALL(__num, __a0, __a1, __a2)                                    \
 	({                                                                    \
 		register unsigned long a0 asm("a0") = (unsigned long)(__a0);  \
@@ -67,6 +45,31 @@ void sunxi_uart_putc(char ch)
 			     : "memory");                                     \
 		a0;                                                           \
 	})
+
+
+int sunxi_uart_getc(void)
+{
+	if ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_RFNE) != 0)
+		return sunxi_uart[SUNXI_UART_RBR];
+	else
+		return -1;
+}
+
+int sunxi_uart_init(unsigned long base)
+{
+  SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
+	sunxi_uart = (volatile void *)base;
+	return 0;
+}
+
+void sunxi_uart_putc(char ch)
+{
+	// while ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_NF) == 0);
+	sunxi_uart[SUNXI_UART_THR] = ch;
+  SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
+}
+
+
 
 uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1, uintptr_t arg2) __attribute__((section(".text.init")));
 uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1, uintptr_t arg2) 

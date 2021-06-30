@@ -30,13 +30,22 @@ drv_ctrl_t* init_console_driver() {
     console_handler = (cmd_handler)drv_console_start;
 
     console_ctrl = (drv_ctrl_t*)console_handler(QUERY_INFO, 0, 0, 0);
-    printd("%x\n", console_ctrl->reg_addr);
+    printd("reg_addr:%x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
-    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-    printd("%x\n", console_va);
+    // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
+    console_va = ioremap((pte*)pt_root,console_ctrl->reg_addr,1024);
+    uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
+    // console_va = console_ctrl->reg_addr;
+    printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, entry);
     printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",console_handler);
     console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
+
+    printd("got here 1\n");
+
     console_handler(CONSOLE_CMD_PUT, 'c', 0,0);
+
+    printd("got here 2\n");
+
     console_handler(CONSOLE_CMD_PUT, 'o', 0,0);
     console_handler(CONSOLE_CMD_PUT, 'm', 0,0);
     console_handler(CONSOLE_CMD_PUT, 'p', 0,0);

@@ -5,49 +5,49 @@
 #include "drv_util.h"
 #include "drv_list.h"
 
-#define PUSH(usr_sp, val) (usr_sp) -= 8; *(uintptr_t*)(usr_sp) = val;
+#define PUSH(usr_sp, val) \
+	(usr_sp) -= 8;    \
+	*(uintptr_t *)(usr_sp) = val;
 uintptr_t enclave_id;
 drv_ctrl_t* peri_reg_list[MAX_DRV] = {0};
 drv_initer drv_init_list[MAX_DRV];
-extern drv_addr_t* drv_addr_list;
+drv_addr_t *drv_addr_list;
 
-uintptr_t init_usr_stack(uintptr_t usr_sp) {
-    PUSH(usr_sp, 0);
-    PUSH(usr_sp, 0);
-    PUSH(usr_sp, 1); 
-    PUSH(usr_sp, 12);
-    PUSH(usr_sp, 1);
-    PUSH(usr_sp, 11); 
-    PUSH(usr_sp, 1); 
-    PUSH(usr_sp, 18); 
-    PUSH(usr_sp, 1); 
-    PUSH(usr_sp, 13); 
-    PUSH(usr_sp, 0xdeaddead); 
-    PUSH(usr_sp, 25); 
-    PUSH(usr_sp, 0); 
-    PUSH(usr_sp, 23); 
-    PUSH(usr_sp, 0); 
-    PUSH(usr_sp, 31); 
-    PUSH(usr_sp, EPAGE_SIZE); 
-    PUSH(usr_sp, 6); 
-    PUSH(usr_sp, 0); 
-    PUSH(usr_sp, 32); 
-    PUSH(usr_sp, 0x112d); 
-    PUSH(usr_sp, 16); 
+uintptr_t init_usr_stack(uintptr_t usr_sp)
+{
+	PUSH(usr_sp, 0);
+	PUSH(usr_sp, 0);
+	PUSH(usr_sp, 1);
+	PUSH(usr_sp, 12);
+	PUSH(usr_sp, 1);
+	PUSH(usr_sp, 11);
+	PUSH(usr_sp, 1);
+	PUSH(usr_sp, 18);
+	PUSH(usr_sp, 1);
+	PUSH(usr_sp, 13);
+	PUSH(usr_sp, 0xdeaddead);
+	PUSH(usr_sp, 25);
+	PUSH(usr_sp, 0);
+	PUSH(usr_sp, 23);
+	PUSH(usr_sp, 0);
+	PUSH(usr_sp, 31);
+	PUSH(usr_sp, EPAGE_SIZE);
+	PUSH(usr_sp, 6);
+	PUSH(usr_sp, 0);
+	PUSH(usr_sp, 32);
+	PUSH(usr_sp, 0x112d);
+	PUSH(usr_sp, 16);
 
-    PUSH(usr_sp, 0); 
+	PUSH(usr_sp, 0);
 
-    PUSH(usr_sp, 0x16);
-    PUSH(usr_sp, 0x39);
-    PUSH(usr_sp, 0x0);
+	PUSH(usr_sp, 0x16);
+	PUSH(usr_sp, 0x39);
+	PUSH(usr_sp, 0x0);
 
-    PUSH(usr_sp, 0x3);
-    return usr_sp;
+	PUSH(usr_sp, 0x3);
+	return usr_sp;
 }
 
-void *  memset (void *a, int b, size_t c) {
-    return a;
-}
 
 void init_other_driver() {
     // drv_initer local_init[64] = {init_console_driver};
@@ -75,6 +75,17 @@ void init_other_driver() {
 		a0;                                                           \
 	})
 
+void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp)
+{
+	printd("[prepare_boot] drv_list @ %p at %p\n", drv_list, &drv_list);
+	printd("\033[0;32m[prepare_boot] enclave_id @ 0x%lx at %p\n\033[0m",
+	       enclave_id, &enclave_id);
+	printd("\033[0;32m[prepare_boot] drv_addr_list @ %p at %p\n\033[0m",
+	       drv_addr_list, &drv_addr_list);
+	SBI_ECALL(0xdeadbeaf, &drv_addr_list, drv_addr_list, 0);
+	printd("[prepare_boot] 0x%lx\n", *(unsigned long *)0xc0706408);
+	init_other_driver();
+	// printd("[prepare_boot] 1\n");
 
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
     printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
@@ -100,14 +111,17 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 
     printd("[prepare_boot] 2\n");
 
-    /* disable user interrupt, stop S mode priv */
-    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);
-    // sstatus |= SSTATUS_SPIE | SSTATUS_SIE;
-    write_csr(sstatus, sstatus);
+	printd("[prepare_boot] 2\n");
+	uintptr_t sstatus = read_csr(sstatus);
+	/* disable user interrupt, stop S mode priv */
+	sstatus = sstatus &
+		  ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);
+	// sstatus |= SSTATUS_SPIE | SSTATUS_SIE;
+	write_csr(sstatus, sstatus);
 
-    printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);
-    /* set user entry */
-    write_csr(sepc, usr_pc);
-    printd("[prepare_boot] usr_sp = 0x%lx\n", usr_sp);
-    write_csr(sscratch, usr_sp);
+	printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);
+	/* set user entry */
+	write_csr(sepc, usr_pc);
+	printd("[prepare_boot] usr_sp = 0x%lx\n", usr_sp);
+	write_csr(sscratch, usr_sp);
 }

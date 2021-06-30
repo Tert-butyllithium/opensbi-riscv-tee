@@ -34,4 +34,5 @@ void printd(const char* s, ...);
 void putstring(const char* s);
 void print(const char* s, ...);
 void putstring_console(const char *s);
+void *my_memset(void *s, int c, unsigned int n);
 #endif

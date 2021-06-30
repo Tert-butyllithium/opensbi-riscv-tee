@@ -77,10 +77,15 @@ void init_other_driver() {
 
 
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
-    printd("[prepare_boot] peri_reg_list @ %p at %p\n", peri_reg_list, &peri_reg_list);
-    printd("\033[0;32m[prepare_boot] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
-    printd("\033[0;32m[prepare_boot] drv_addr_list @ 0x%p at 0x%p\n\033[0m", drv_addr_list, &drv_addr_list);
-    SBI_ECALL(0xdeadbeaf,0x40706408,0,0);
+    printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
+    printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
+    printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
+
+    uintptr_t *ptr = 0xc0706410; // &drv_addr_list
+    uintptr_t content = *ptr;
+    printd("[prepare_boot] memory dump of %p: 0x%lx\n", ptr, content);
+
+    SBI_ECALL(0xdeadbeaf,0x40706410,0,0);
     // printd("[prepare_boot] 0x%lx\n",*(unsigned long * )0x40706408);
     init_other_driver();
     // printd("[prepare_boot] 1\n");

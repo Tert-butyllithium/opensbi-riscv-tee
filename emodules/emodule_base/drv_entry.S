@@ -124,7 +124,7 @@ _start:
     sfence.vma
     csrw    satp, a0
 2:
-   // sfence.vma
+    sfence.vma
 
     /* switch to trap handler */
     la      s7, trap_handler

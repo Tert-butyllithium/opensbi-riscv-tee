@@ -122,7 +122,8 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     }
 
     drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list + EDRV_VA_PA_OFFSET);
-    printd("\033[1;33m drv_addr_list=0x%p drv_list=0x%p\n\033[0m",drv_addr_list, drv_list);
+    printd("\033[1;33m[init_mem] drv_addr_list=0x%p drv_list=0x%p\n\033[0m", drv_addr_list, drv_list);
+    printd("\033[1;33m[init_mem] drv_addr_list @ 0x%p drv_list @ 0x%p\n\033[0m", &drv_addr_list, &drv_list);
     uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
@@ -150,12 +151,13 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     /* Load ELF running inside enclave */
     uintptr_t usr_pc = elf_load(pt_root, mem_start, USR, &prog_brk);
     
-    if (drv_list != 0) {
+    printd("[init_mem] drv_list = 0x%lx\n", drv_list);
+    if (drv_list) {
     // if (drv_list != 0 && drv_list[cnt].drv_start != 0) {
         uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
         uintptr_t drv_pa_end = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
         printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
-        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, PAGE_UP((drv_pa_end - drv_pa_start)), PTE_V | PTE_R | PTE_X);
+        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, (PAGE_UP(drv_pa_end - drv_pa_start)) >> EPAGE_SHIFT, PTE_V | PTE_R | PTE_X);
     }
     /* base driver remaining mem */
     /* thus easier manupilating satp */
@@ -244,15 +246,17 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         DRV);
     drv_sp += EDRV_STACK_SIZE;
 
-    printd("sp: 0x%llx\nsatp: 0x%llx\n", drv_sp, pt_root);
+    printd("sp: 0x%lx\npt_root: 0x%lx\n", drv_sp, pt_root);
     printd("usr sp: 0x%llx\n", usr_sp);
-    printd("wtf!!!!!\n");
     uintptr_t satp = pt_root >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
-    // printd("[init_mem] drv_list_addr: 0x%p at 0x%p\n",drv_addr_list, &drv_addr_list);
-    // enclave_id = 114514;
-    // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
+
+    // page table check
+    uintptr_t va = 0xc0706410;
+    pte pte_to_be_checked = *get_pte((pte*)pt_root, va, 0);
+    uintptr_t page_table_entry = (uintptr_t)pte_to_be_checked;
+    printd("[init_mem] pte = 0x%lx\n", page_table_entry);
 
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));

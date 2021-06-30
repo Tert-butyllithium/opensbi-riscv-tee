@@ -15,7 +15,7 @@ drv_ctrl_t* init_console_driver() {
     //     drv_addr_list = 0xc0708028;
     //     printd("\033[0;32mHere, I found the address becoming 0 and change it to 0x%p\n\033[0m",drv_addr_list);
     // }
-    printd("\033[0;32m[init_console_driver] drv_addr_list @ %p\n\033[0m", drv_addr_list);
+    printd("\033[0;32m[init_console_driver] drv_addr_list: 0x%p\n\033[0m", drv_addr_list);
     drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
     drv_console_end = drv_addr_list[DRV_CONSOLE].drv_end;
     printd("[init_console_driver] drv_console_start: 0x%x drv_console_end: 0x%x\n", drv_console_start, drv_console_end);

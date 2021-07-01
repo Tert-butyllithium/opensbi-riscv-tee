@@ -1,8 +1,9 @@
 #include "drv_page_pool.h"
 #ifndef __ASSEMBLER__
-#include "drv_mem.h"
+#include "../drv_mem.h"
 #endif
-#include "drv_util.h"
+#include "page_table.h"
+#include "../drv_util.h"
 /* SPA alway return ACCESSABLE address instead of raw physical address!!!! */
 
 struct pg_list page_pools[NUM_POOL];

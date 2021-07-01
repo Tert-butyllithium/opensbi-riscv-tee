@@ -3,7 +3,7 @@
 #ifndef __ASSEMBLER__
 #include "drv_mem.h"
 #endif
-#include "drv_page_pool.h"
+#include "mm/drv_page_pool.h"
 #include "drv_base.h"
 #include "drv_list.h"
 #include "../drv_console/drv_console.h"

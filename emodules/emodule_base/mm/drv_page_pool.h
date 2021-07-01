@@ -2,7 +2,7 @@
 #ifndef __ASSEMBLER__
 #include <stdio.h>
 #include <stdint.h>
-#include "enclave.h"
+#include "../enclave.h"
 
 #define NEXT_PAGE(page) *((uintptr_t*)page)
 #define LIST_EMPTY(list) ((list)->count == 0 || (list)->head == 0)

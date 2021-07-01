@@ -64,9 +64,9 @@ int sunxi_uart_init(unsigned long base)
 
 void sunxi_uart_putc(char ch)
 {
-	// while ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_NF) == 0);
+	while ((sunxi_uart[SUNXI_UART_USR] & SUNXI_UART_USR_NF) == 0);
 	sunxi_uart[SUNXI_UART_THR] = ch;
-  SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
+  // SBI_ECALL(0xdeadbeaf,sunxi_uart,&sunxi_uart,0);
 }
 
 

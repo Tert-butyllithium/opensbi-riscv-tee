@@ -33,7 +33,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         // sbi_printf("base_start @ %p\n", &_base_start);
         // regs[A0_INDEX] = create_enclave(regs, mepc);
         //write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
-        create_enclave(args, mepc);
+        ret = create_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] after create_enclave\n");
         return ret;
 

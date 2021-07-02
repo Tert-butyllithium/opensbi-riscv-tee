@@ -378,7 +378,7 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	context->enclave_binary_size = binary_size;
 	context->drv_list	     = start_addr;
 	context->user_param	     = start_addr + drv_size;
-	args[0]			     = avail_id;
+	// args[0]			     = avail_id;
 	return avail_id;
 }
 

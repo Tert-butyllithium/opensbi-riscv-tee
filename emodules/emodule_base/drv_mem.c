@@ -4,75 +4,80 @@
 #include "drv_base.h"
 #include "drv_elf.h"
 #include "drv_list.h"
-#include "drv_page_pool.h"
+#include "mm/drv_page_pool.h"
+#include "mm/page_table.h"
 #include "drv_util.h"
 /* Each Eapp has their own program break */
 uintptr_t prog_brk;
 uintptr_t pt_root;
 uintptr_t drv_start_va;
 
-pte* get_pte(pte* root, uintptr_t va, char alloc)
-{
-    uintptr_t satp = read_csr(satp), free_page, offset = va_pa_offset();
-    pte* pt = (pte*)((uintptr_t)root + offset);
-    int i;
-    for (i = 2; i > 0; i--) {
-        size_t idx = EPPN(va, i);
-        if (!(pt[idx] & PTE_V)) {
-            if (alloc) {
-                free_page = spa_get_zero(DRV);
-                pt[idx] = PA2PTE(free_page - offset) | PTE_V;
-                pt = (pte*)(free_page);
-            } else
-                return 0;
-        } else {
-            pt = (pte*)((uintptr_t)PTE2PA(pt[idx]) + offset);
-        }
-    }
-    return (pte*)&pt[EPPN(va, 0)];
-}
-void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
-    uintptr_t attr)
-{
-    pte* pt;
-    size_t i;
-    for (i  = 0; i < n_pages; i++) {
-        pt = get_pte(root, va, 1);
-        *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X | PTE_R;
-        va += EPAGE_SIZE;
-        pa += EPAGE_SIZE;
-    }
-}
-uintptr_t ioremap(pte* root, uintptr_t pa, size_t size)
-{
-    size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
-    map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages, PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
-    uintptr_t cur_addr = drv_start_va + EDRV_DRV_START;
-    drv_start_va += n_pages << EPAGE_SHIFT;
-    return cur_addr;
-}
-uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
-    char id)
-{
-    pte* pt;
-    uintptr_t pa;
-    size_t i;
-    for (i = 0; i < n_pages; i++) {
-        pt = get_pte(root, va, 1);
-        if ((*pt) & PTE_V) {
-            /* Already mapped */
-            /* TODO: check if attr are the same */
-            goto next_page;
-        }
-        pa = spa_get_pa_zero(id);
-        *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
-next_page:;
-        va += EPAGE_SIZE;
-    }
-    return pa;
-}
+// pte* get_pte(pte* root, uintptr_t va, char alloc)
+// {
+//     uintptr_t satp = read_csr(satp), free_page, offset = va_pa_offset();
+//     pte* pt = (pte*)((uintptr_t)root + offset);
+//     int i;
+//     for (i = 2; i > 0; i--) {
+//         size_t idx = EPPN(va, i);
+//         if (!(pt[idx] & PTE_V)) {
+//             if (alloc) {
+//                 free_page = spa_get_zero(DRV);
+//                 pt[idx] = PA2PTE(free_page - offset) | PTE_V;
+//                 pt = (pte*)(free_page);
+//             } else
+//                 return 0;
+//         } else {
+//             pt = (pte*)((uintptr_t)PTE2PA(pt[idx]) + offset);
+//         }
+//     }
+//     return (pte*)&pt[EPPN(va, 0)];
+// }
+// void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
+//     uintptr_t attr)
+// {
+//     pte* pt;
+//     size_t i;
+//     for (i  = 0; i < n_pages; i++) {
+//         pt = get_pte(root, va, 1);
+//         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X | PTE_R;
+//         va += EPAGE_SIZE;
+//         pa += EPAGE_SIZE;
+//     }
+// }
+// uintptr_t ioremap(pte* root, uintptr_t pa, size_t size)
+// {
+//     size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
+//     map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages, PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
+//     uintptr_t cur_addr = drv_start_va + EDRV_DRV_START;
+//     drv_start_va += n_pages << EPAGE_SHIFT;
+//     return cur_addr;
+// }
 
-#define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
+// uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
+//     char id)
+// {
+//     pte* pt;
+//     uintptr_t pa;
+//     size_t i;
+//     for (i = 0; i < n_pages; i++) {
+//         pt = get_pte(root, va, 1);
+//         if ((*pt) & PTE_V) {
+//             /* Already mapped */
+//             /* TODO: check if attr are the same */
+//             goto next_page;
+//         }
+//         pa = spa_get_pa_zero(id);
+//         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
+// next_page:;
+//         va += EPAGE_SIZE;
+//     }
+//     return pa;
+// }
+
+// #define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
+
+
+#define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
 
 #define SBI_CALL(___which, ___arg0, ___arg1, ___arg2) ({			\
 	register uintptr_t a0 asm ("a0") = (uintptr_t)(___arg0);	\
@@ -143,17 +148,18 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         usr_avail_size);
     printd("user spa initialize done\n");
 
-    pt_root = spa_get_zero(DRV);
-    printd("[init_mem] root: 0x%x\n", pt_root);
+    all_zero();
+    // pt_root = spa_get_zero(DRV);
+    pt_root = get_page_table_root();
+    printd("\033[1;33m[init_mem] root: 0x%x\n\033[0m", pt_root);
     /* Load ELF running inside enclave */
     uintptr_t usr_pc = elf_load(pt_root, mem_start, USR, &prog_brk);
     
     printd("[init_mem] drv_list = 0x%lx\n", drv_list);
     if (drv_list) {
     // if (drv_list != 0 && drv_list[cnt].drv_start != 0) {
-        uintptr_t drv_pa_start = drv_list[0].drv_start - EDRV_VA_PA_OFFSET;
-        uintptr_t drv_pa_end = (uintptr_t)drv_list + (uintptr_t)(64 * sizeof(drv_addr_t));
-        size_t n_drv_pages = (PAGE_UP(drv_pa_end - drv_pa_start))>>EPAGE_SHIFT;
+        uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
+        uintptr_t drv_pa_end = PAGE_UP(((uintptr_t)drv_list) + 64 * sizeof(drv_addr_t));
         printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
         printd("[init_mem] n_drv_pages = %d\n", n_drv_pages);
         map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, n_drv_pages, PTE_V | PTE_R | PTE_X);
@@ -187,25 +193,35 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         n_base_text_pages, PTE_V | PTE_X | PTE_R);
     printd(".text: 0x%x - 0x%x -> 0x%x\n", text_start, text_end, __pa(text_start));
 
-    /* base driver .init.data section */
-    extern char _init_data_start, _init_data_end;
-    uintptr_t init_data_start = (uintptr_t)&_init_data_start;
-    uintptr_t init_data_end = (uintptr_t)&_init_data_end;
-    uintptr_t init_data_size = init_data_end - init_data_start;
+    /* page_table */
+    extern char _page_table_start,  _page_table_end;
+    uintptr_t page_table_start = (uintptr_t)&_page_table_start;
+    uintptr_t page_table_end = (uintptr_t)&_page_table_end;
+    uintptr_t init_data_size = page_table_end - page_table_start;
     size_t n_base_init_data_pages = (PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + init_data_start, init_data_start,
+    map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + page_table_start, page_table_start,
         n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
-    printd(".init.data: 0x%x - 0x%x -> 0x%x\n", init_data_start, init_data_end, __pa(init_data_start));
+    printd("page_table: 0x%x - 0x%x -> 0x%x\n", page_table_start, page_table_end, __pa(page_table_start));
 
-    /* base driver .data section */
-    extern char _data_start, _data_end;
-    uintptr_t data_start = (uintptr_t)&_data_start;
-    uintptr_t data_end = (uintptr_t)&_data_end;
-    uintptr_t data_size = data_end - data_start;
-    size_t n_base_data_pages = (PAGE_UP(data_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + data_start, data_start,
-        n_base_data_pages, PTE_V | PTE_W | PTE_R);
-    printd(".data: 0x%x - 0x%x -> 0x%x\n", data_start, data_end,__pa(data_start));
+    /* base driver .init.data section */
+    // extern char _init_data_start, _init_data_end;
+    // uintptr_t init_data_start = (uintptr_t)&_init_data_start;
+    // uintptr_t init_data_end = (uintptr_t)&_init_data_end;
+    // uintptr_t init_data_size = init_data_end - init_data_start;
+    // size_t n_base_init_data_pages = (PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
+    // map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + init_data_start, init_data_start,
+    //     n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
+    // printd(".init.data: 0x%x - 0x%x -> 0x%x\n", init_data_start, init_data_end, __pa(init_data_start));
+
+    // /* base driver .data section */
+    // extern char _data_start, _data_end;
+    // uintptr_t data_start = (uintptr_t)&_data_start;
+    // uintptr_t data_end = (uintptr_t)&_data_end;
+    // uintptr_t data_size = data_end - data_start;
+    // size_t n_base_data_pages = (PAGE_UP(data_size)) >> EPAGE_SHIFT;
+    // map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + data_start, data_start,
+    //     n_base_data_pages, PTE_V | PTE_W | PTE_R);
+    // printd(".data: 0x%x - 0x%x -> 0x%x\n", data_start, data_end,__pa(data_start));
 
     /* base driver .rodata section */
     extern char _rodata_start, _rodata_end;

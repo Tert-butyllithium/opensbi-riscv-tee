@@ -1,5 +1,6 @@
 #include "drv_list.h"
-#include "drv_page_pool.h"
+#include "mm/drv_page_pool.h"
+#include "mm/page_table.h"
 #include "../drv_console/drv_console.h"
 
 drv_ctrl_t* init_console_driver2()
@@ -37,19 +38,18 @@ drv_ctrl_t* init_console_driver() {
     // printd("[init_console_driver] drv_size: 0x%lx, n_console_drv_pages: 0x%lx at %p\n",console_drv_size, n_console_drv_pages, &n_console_drv_pages);
  
     // map_page((pte *)pt_root, drv_console_start, drv_console_start - EDRV_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
-    // printd("[init_console_driver] after map_page\n");
+    printd("[init_console_driver] after map_page\n");
     
     console_handler = (cmd_handler)drv_console_start;
 
     console_ctrl = (drv_ctrl_t*)console_handler(QUERY_INFO, 0, 0, 0);
     printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
-    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-    // console_va = ioremap((pte*)pt_root,console_ctrl->reg_addr, 0x400);
-    // console_va = console_ctrl->reg_addr;
+    // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
+    console_va = ioremap((pte*)pt_root,console_ctrl->reg_addr,1024);
     // uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
     // console_va = console_ctrl->reg_addr;
-    // printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, entry);
+    printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, get_pa(console_va));
     printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",console_handler);
     console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 

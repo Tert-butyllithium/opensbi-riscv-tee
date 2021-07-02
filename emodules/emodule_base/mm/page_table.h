@@ -46,6 +46,8 @@ void map_page(pte *, uintptr_t, uintptr_t, size_t, uintptr_t);
 uintptr_t ioremap(pte *, uintptr_t, size_t);
 uintptr_t alloc_page(pte *, uintptr_t, size_t, uintptr_t, char);
 uintptr_t get_pa(uintptr_t);
+uintptr_t get_page_table_root(void);
+void all_zero(void);
 // pte* get_pte(pte*, uintptr_t, char);
 
 #endif

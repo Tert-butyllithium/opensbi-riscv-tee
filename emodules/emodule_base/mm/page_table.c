@@ -9,7 +9,7 @@
 #define printd printf
 #endif
 
-page_directory page_directory_pool[64];
+page_directory page_directory_pool[64] __attribute__((section(".page_table")));
 
 /**
  * insert a va-pa pair to page table, maintained via a trie
@@ -39,10 +39,11 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	for (; i < len - 1; i++) {
 		if (!t->next[p][l[i]]) {
 			t->next[p][l[i]] = ++t->cnt;
-			tmp_pte		 = &page_directory_pool[p][l[i]];
+			printd("page cnt:%d\n", t->cnt);
+			tmp_pte = &page_directory_pool[p][l[i]];
 			tmp_pte->ppn =
 				(uintptr_t)&page_directory_pool[t->cnt][0];
-			tmp_pte->pte_v = tmp_pte->pte_d = tmp_pte->pte_u = 1;
+			tmp_pte->pte_v = tmp_pte->pte_d = 1;
 		}
 		p = t->next[p][l[i]];
 	}
@@ -53,7 +54,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	if (len == 2) {
 		tmp_pte->ppn = (tmp_pte->ppn | MUSK_OFFSET) ^ MUSK_OFFSET;
 	}
-	tmp_pte->pte_v = tmp_pte->pte_d = tmp_pte->pte_u = 1;
+	tmp_pte->pte_v = tmp_pte->pte_d = 1;
 	tmp_pte->pte_r = tmp_pte->pte_w = tmp_pte->pte_x = 1;
 	return *((uintptr_t *)tmp_pte);
 }
@@ -65,6 +66,11 @@ static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
 	uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
 						    levels, attr);
 	return p;
+}
+
+uintptr_t get_page_table_root()
+{
+	return (uintptr_t)&page_directory_pool[0][0];
 }
 
 uintptr_t get_pa(uintptr_t va)
@@ -121,7 +127,7 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
 	static uintptr_t drv_start_va = 0;
-	size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
+	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
 	map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
 	uintptr_t cur_addr = drv_start_va + EDRV_DRV_START;
@@ -129,8 +135,8 @@ uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 	return cur_addr;
 }
 
-uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
-    char id)
+uintptr_t alloc_page(pte *root, uintptr_t va, size_t n_pages, uintptr_t attr,
+		     char id)
 {
 	pte *pt;
 	uintptr_t pa;
@@ -141,5 +147,19 @@ uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
 		va += EPAGE_SIZE;
 		pa += EPAGE_SIZE;
 		n_pages--;
+	}
+}
+
+void all_zero()
+{
+	int i, j;
+	pte *tmp_pte;
+	for (i = 0; i < 64; i++) {
+		for (j = 0; j < 512; j++) {
+			tmp_pte = &page_directory_pool[i][j];
+			if (*((uintptr_t *)tmp_pte)) {
+				printd("!!!!!!! %d:%d not zero\n", i, j);
+			}
+		}
 	}
 }

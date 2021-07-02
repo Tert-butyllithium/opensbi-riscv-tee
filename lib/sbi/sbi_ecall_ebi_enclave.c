@@ -390,7 +390,7 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	context->enclave_binary_size = payload_size;
 	context->drv_list	     = base_module_start;
 	context->user_param	     = base_module_start + extra_module_size;
-	args[0]			     = avail_id;
+	// args[0]			     = avail_id;
 	return avail_id;
 }
 

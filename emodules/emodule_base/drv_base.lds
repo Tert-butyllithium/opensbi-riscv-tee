@@ -40,6 +40,14 @@ SECTIONS
     *(.data.*)
   }
   _data_end = .;
+  
+  . = ALIGN(0x1000);
+
+  _page_table_start = .;
+  .page_table : {
+    *(.page_table)
+  }
+  _page_table_end = .;
 
   . = ALIGN(0x1000);
 

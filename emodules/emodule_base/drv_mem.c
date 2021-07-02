@@ -76,7 +76,18 @@ uintptr_t drv_start_va;
 
 // #define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
 
-
+#define SBI_CALL5(___which, ___arg0, ___arg1, ___arg2, ___arg3)          \
+	({                                                               \
+		register uintptr_t a0 asm("a0") = (uintptr_t)(___arg0);  \
+		register uintptr_t a1 asm("a1") = (uintptr_t)(___arg1);  \
+		register uintptr_t a2 asm("a2") = (uintptr_t)(___arg2);  \
+		register uintptr_t a6 asm("a6") = (uintptr_t)(___arg3);  \
+		register uintptr_t a7 asm("a7") = (uintptr_t)(___which); \
+		asm volatile("ecall"                                     \
+			     : "+r"(a0)                                  \
+			     : "r"(a1), "r"(a2), "r"(a6), "r"(a7)        \
+			     : "memory");                                \
+	})
 #define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
 
 /* Initialize memory for driver, including stack, heap, page table */
@@ -137,7 +148,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
         usr_avail_size);
     printd("user spa initialize done\n");
 
-    // all_zero();
+    all_zero();
     // pt_root = spa_get_zero(DRV);
     pt_root = get_page_table_root();
     printd("\033[1;33m[init_mem] root: 0x%x\n\033[0m", pt_root);
@@ -266,7 +277,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
 
-
+    printd("[init_mem] after writing sstatus\n");
     SBI_CALL5(0xdeadbeaf,drv_addr_list,0,0,0);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));

@@ -24,18 +24,19 @@
 typedef unsigned long size_t;
 
 typedef struct pte {
-	uintptr_t __unused_value : 10;
-	uintptr_t ppn : 44;
-	uint32_t rsw : 2;
-	uint32_t pte_d : 1;
-	uint32_t pte_a : 1;
-	uint32_t pte_g : 1;
-	uint32_t pte_u : 1;
-	uint32_t pte_x : 1;
-	uint32_t pte_w : 1;
-	uint32_t pte_r : 1;
-	uint32_t pte_v : 1;
+    uint32_t pte_v: 1;
+    uint32_t pte_r: 1;
+    uint32_t pte_w: 1;
+    uint32_t pte_x: 1;
+    uint32_t pte_u: 1;
+    uint32_t pte_g: 1;
+    uint32_t pte_a: 1;
+    uint32_t pte_d: 1;
+    uint32_t rsw: 2;
+    uintptr_t ppn: 44;
+    uintptr_t __unused_value: 10;
 } pte;
+
 
 typedef struct trie {
 	uint32_t next[3][512], cnt;

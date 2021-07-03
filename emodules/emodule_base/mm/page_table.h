@@ -14,10 +14,13 @@
 #define PAGE_UP(addr) (ROUND_UP(addr, EPAGE_SIZE))
 #define PAGE_DOWN(addr) ((addr) & (~((EPAGE_SIZE)-1)))
 
-#define MUSK_OFFSET 0xfff
-#define MUSK_L0 0x1ff000
-#define MUSK_L1 0x3fe00000
-#define MUSK_L2 0x7fc0000000
+#define MASK_OFFSET 0xfff
+#define MASK_L0 0x1ff000
+#define MASK_L1 0x3fe00000
+#define MASK_L2 0x7fc0000000
+
+// Pool size for page table itself
+#define PAGE_DIR_POOL 64 
 
 #ifndef __ASSEMBLER__
 
@@ -39,7 +42,7 @@ typedef struct pte {
 
 
 typedef struct trie {
-	uint32_t next[3][512], cnt;
+	uint32_t next[PAGE_DIR_POOL][512], cnt;
 } trie;
 typedef pte page_directory[512];
 

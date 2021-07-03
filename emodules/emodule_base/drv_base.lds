@@ -47,7 +47,13 @@ SECTIONS
   .page_table : {
     *(.page_table)
   }
+
+  .page_table_trie : {
+    *(.page_table_trie)
+  }
+  
   _page_table_end = .;
+
 
   . = ALIGN(0x1000);
 

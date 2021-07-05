@@ -102,12 +102,9 @@ trap_handler:
 
 ret_to_usr:
     LOAD    s2,  CONTEXT_ADDR_SP(SP)
-    jal     log
     csrw    sscratch, s2
-    jal     log
 
     RESTORE_CONTEXT
-    jal     log
     csrrw   sp, sscratch, sp
     sret
 

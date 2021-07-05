@@ -279,7 +279,6 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
 
-
     // //WARNING: should remove
     // ioremap(NULL,0x02500000,4096);
 

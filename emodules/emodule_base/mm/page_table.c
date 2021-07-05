@@ -115,6 +115,31 @@ uintptr_t get_pa(uintptr_t va)
 	}
 }
 
+void print_pte(uintptr_t va)
+{
+	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
+			  (va & MASK_L0) >> 12 };
+	pte entry;
+	pte *root = (void*) get_page_table_root();
+	pte tmp_entry;
+	uintptr_t tmp;
+	int i = 0;
+	while (1) {
+		tmp_entry = root[l[i]];
+		if (!tmp_entry.pte_v) {
+			printd("ERROR: va:0x%lx is not valid!!!\n", va);
+			return;
+		}
+		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
+			break;
+		}
+		tmp  = tmp_entry.ppn << 12;
+		root = (pte *)(tmp + va_pa_offset());
+		i++;
+	}
+	printd("[get_va_pte] pte: 0x%lx\n", *(uintptr_t*)&tmp_entry);
+}
+
 void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	      uintptr_t attr)
 {
@@ -160,6 +185,8 @@ uintptr_t alloc_page(pte *root, uintptr_t va, size_t n_pages, uintptr_t attr,
 		pa += EPAGE_SIZE;
 		n_pages--;
 	}
+
+	return pa;
 }
 
 void all_zero()

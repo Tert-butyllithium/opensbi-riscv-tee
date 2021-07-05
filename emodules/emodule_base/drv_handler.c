@@ -34,6 +34,7 @@ void handle_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr
 }
 
 void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
+    printd("[handle_syscall] cp1\n");
     uintptr_t sstatus = read_csr(sstatus);
     sstatus |= SSTATUS_SUM;
     write_csr(sstatus, sstatus);
@@ -43,6 +44,7 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
     }
 
     uintptr_t which = regs[A7_INDEX], arg_0 = regs[A0_INDEX], arg_1 = regs[A1_INDEX], retval = 0;
+    printd("[handle_syscall] cp2\n");
 
     switch (which)
     {
@@ -77,10 +79,11 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
         break;
     }
-    printd("[ebi_write] before writing sepc: sepc = 0x%lx\n", sepc);
+    printd("[handle_syscall] before writing sepc: sepc = 0x%lx\n", sepc);
     write_csr(sepc, sepc + 4);
     sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
     write_csr(sstatus, sstatus);
+    printd("[handle_syscall] cp3\n");
     regs[A0_INDEX] = retval;
 }
 void unimplemented_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval){

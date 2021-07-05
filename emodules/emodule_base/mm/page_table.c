@@ -43,7 +43,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 			printd("page cnt:%d\n", t->cnt);
 			tmp_pte = &page_directory_pool[p][l[i]];
 			tmp_pte->ppn =
-				((uintptr_t)&page_directory_pool[t->cnt][0])>>12;
+				(((uintptr_t)&page_directory_pool[t->cnt][0])-va_pa_offset())>>12;
 			tmp_pte->pte_v = tmp_pte->pte_d = 1;
 		}
 		p = t->next[p][l[i]];
@@ -57,6 +57,9 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	}
 	tmp_pte->pte_v = tmp_pte->pte_d = tmp_pte->pte_a = 1;
 	tmp_pte->pte_r = tmp_pte->pte_w = tmp_pte->pte_x = 1;
+	if(attr & PTE_U){
+		tmp_pte->pte_u = 1;
+	}
 	return *((uintptr_t *)tmp_pte);
 }
 
@@ -92,7 +95,7 @@ uintptr_t get_pa(uintptr_t va)
 			break;
 		}
 		tmp  = tmp_entry.ppn << 12;
-		root = (pte *)tmp;
+		root = (pte *)(tmp + va_pa_offset());
 		i++;
 	}
 	if (i == 2)

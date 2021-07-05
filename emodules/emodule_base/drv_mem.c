@@ -167,7 +167,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     /* base driver remaining mem */
     /* thus easier manupilating satp */
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + usr_avail_start, usr_avail_start,
-        PAGE_DOWN(usr_avail_size) >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
+        PAGE_DOWN(usr_avail_size) >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R |PTE_U);
     printd("usr.remain: 0x%x - 0x%x -> 0x%x\n", usr_avail_start,
         usr_avail_start + PAGE_DOWN(usr_avail_size), __pa(usr_avail_start));
 

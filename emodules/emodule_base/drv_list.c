@@ -40,7 +40,7 @@ drv_ctrl_t* init_console_driver() {
     // console_va = 0xd0000000;
     // uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
     // console_va = console_ctrl->reg_addr;
-    // printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, get_pa(console_va));
+    printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, get_pa(console_va));
     printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",console_handler);
     console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 

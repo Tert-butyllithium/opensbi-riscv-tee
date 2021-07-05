@@ -109,12 +109,12 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 {
 	pte *pt;
 
-	while (n_pages >= 512) {
-		page_directory_insert(va, pa, 2, attr);
-		va += EPAGE_SIZE * 512;
-		pa += EPAGE_SIZE * 512;
-		n_pages -= 512;
-	}
+	// while (n_pages >= 512) {
+	// 	page_directory_insert(va, pa, 2, attr);
+	// 	va += EPAGE_SIZE * 512;
+	// 	pa += EPAGE_SIZE * 512;
+	// 	n_pages -= 512;
+	// }
 
 	while (n_pages >= 1) {
 		page_directory_insert(va, pa, 3, attr);
@@ -124,14 +124,18 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	}
 }
 
+static uintptr_t drv_va_start = 0;
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
-	static uintptr_t drv_start_va = 0;
+	// static uintptr_t drv_va_start = 0;
+	printd("[ioremap] drv_va_start @ 0x%lx\n", &drv_va_start);
 	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
-	map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages,
+	map_page(root, drv_va_start + EDRV_DRV_START, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
-	uintptr_t cur_addr = drv_start_va + EDRV_DRV_START;
-	drv_start_va += n_pages << EPAGE_SHIFT;
+	uintptr_t cur_addr = drv_va_start + EDRV_DRV_START;
+	printd("[ioremap] drv_va_start: 0x%lx\n", drv_va_start);
+	drv_va_start += n_pages << EPAGE_SHIFT;
+	printd("[ioremap] drv_va_start: 0x%lx\n", drv_va_start);
 	return cur_addr;
 }
 

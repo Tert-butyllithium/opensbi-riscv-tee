@@ -10,7 +10,7 @@
 /* Each Eapp has their own program break */
 uintptr_t prog_brk;
 uintptr_t pt_root;
-uintptr_t drv_start_va;
+// uintptr_t drv_start_va;
 
 // pte* get_pte(pte* root, uintptr_t va, char alloc)
 // {
@@ -126,7 +126,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     drv_addr_list = (void*)(EDRV_VA_PA_OFFSET + (void*) drv_addr_list);
     
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
-    uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
+    uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + (uintptr_t)(64 * sizeof(drv_addr_t)));
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
     printd("[init_mem] base_avail_start = 0x%x, base_avail_end = 0x%x\n", base_avail_start, base_avail_end);
@@ -247,6 +247,10 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 
     /* base driver remaining mem */
     /* thus easier manupilating satp */
+    printd("drv.remain: 0x%x - 0x%x -> 0x%x\n", base_avail_start,
+    base_avail_start+PAGE_DOWN(base_avail_size), __pa(base_avail_start));
+
+    asm volatile("li a7, 0x11223344");
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + base_avail_start,
         base_avail_start, PAGE_DOWN(base_avail_size) >> EPAGE_SHIFT,
         PTE_V | PTE_W | PTE_R);

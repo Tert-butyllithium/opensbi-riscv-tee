@@ -89,12 +89,16 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
     init_other_driver();
     // printd("[prepare_boot] 1\n");
     /* allow S mode access U mode memory */
-    uintptr_t sstatus = read_csr(sstatus);
-    sstatus |= SSTATUS_SUM;
-    write_csr(sstatus, sstatus);
-    usr_sp = init_usr_stack(usr_sp);
+	
+	// uintptr_t sstatus = read_csr(sstatus);
+    // sstatus |= SSTATUS_SUM;
+    // write_csr(sstatus, sstatus);
+
+
+    // usr_sp = init_usr_stack(usr_sp);
     /* allow S mode trap/interrupt */
-    uintptr_t sie = SIE_SEIE | SIE_SSIE;
+	uintptr_t sie = read_csr(sie);
+    sie |= SIE_SEIE | SIE_SSIE;
     write_csr(sie, sie);
 
 	printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);

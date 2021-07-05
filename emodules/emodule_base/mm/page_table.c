@@ -55,10 +55,18 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	if (len == 2) {
 		tmp_pte->ppn = (tmp_pte->ppn | MASK_OFFSET) ^ MASK_OFFSET;
 	}
-	tmp_pte->pte_v = tmp_pte->pte_d = tmp_pte->pte_a = 1;
-	tmp_pte->pte_r = tmp_pte->pte_w = tmp_pte->pte_x = 1;
+	tmp_pte->pte_v = 1;
 	if(attr & PTE_U){
 		tmp_pte->pte_u = 1;
+	}
+	if(attr & PTE_W || attr & PTE_D){
+		tmp_pte->pte_d = tmp_pte->pte_w = 1;
+	}
+	if(attr & PTE_R || attr & PTE_A){
+		tmp_pte->pte_a = tmp_pte->pte_r  = 1;
+	}
+	if(attr & PTE_X){
+		tmp_pte->pte_x = 1;
 	}
 	return *((uintptr_t *)tmp_pte);
 }

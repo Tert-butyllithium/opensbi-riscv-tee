@@ -279,6 +279,9 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 	write_csr(sstatus, sstatus);
 
 
+    // //WARNING: should remove
+    // ioremap(NULL,0x02500000,4096);
+
     SBI_CALL5(0xdeadbeaf,drv_addr_list,0,0,0);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));

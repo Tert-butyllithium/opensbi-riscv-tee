@@ -49,14 +49,12 @@ int ebi_brk(uintptr_t addr) {
 
 int ebi_write(uintptr_t fd, uintptr_t content) {
     /* stdout */
-    printd("[ebi_write]\n");
     // SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_FETCH);
     cmd_handler console_handler = (cmd_handler)drv_addr_list[DRV_CONSOLE].drv_start;
     if (fd == 1) {
         char* str = (char*)content;
         while(*str) {
             console_handler(CONSOLE_CMD_PUT, *str, 0, 0);
-            *str = 0;
             str++;
         }
     }

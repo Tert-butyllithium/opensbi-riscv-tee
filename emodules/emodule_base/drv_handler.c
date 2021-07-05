@@ -50,12 +50,14 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         retval = ebi_fstat(arg_0,arg_1);
         break;
     case SYS_write:
+        printd("[handle_syscall] SYS_write\n");
         retval = ebi_write(arg_0, arg_1);
         break;
     case SYS_close:
         retval = ebi_close(arg_0);
         break;
     case SYS_brk:
+        printd("[handle_syscall] SYS_brk: arg0 = 0x%lx\n", arg_0);
         retval = ebi_brk(arg_0);
         break;
     case SYS_gettimeofday:
@@ -75,8 +77,9 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
         break;
     }
+    printd("[ebi_write] before writing sepc: sepc = 0x%lx\n", sepc);
     write_csr(sepc, sepc + 4);
-    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);
+    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
     write_csr(sstatus, sstatus);
     regs[A0_INDEX] = retval;
 }

@@ -97,13 +97,17 @@ trap_handler:
     j       ret_to_usr
 1:  
     jal     handle_syscall
+    jal     log
     j       ret_to_usr
 
 ret_to_usr:
     LOAD    s2,  CONTEXT_ADDR_SP(SP)
+    jal     log
     csrw    sscratch, s2
+    jal     log
 
     RESTORE_CONTEXT
+    jal     log
     csrrw   sp, sscratch, sp
     sret
 
@@ -137,3 +141,21 @@ _start:
     csrrw   sp, sscratch, sp
 
     sret
+
+
+log:
+    SAVE_CONTEXT
+    li a7, 0x1
+    li a0, 'h'
+    ecall
+    li a7, 0x1
+    li a0, 'e'
+    ecall
+    li a7, 0x1
+    li a0, 'l'
+    ecall
+    li a7, 0x1
+    li a0, '\n'
+    ecall
+    RESTORE_CONTEXT
+    ret

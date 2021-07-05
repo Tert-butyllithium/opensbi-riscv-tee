@@ -63,7 +63,8 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         break;
     case SYS_exit:
         // SBI_CALL(EBI_EXIT, enclave_id, arg_0, 0);
-        SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
+        printd("[handle_syscall] SYS_exit\n");
+        SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, EBI_EXIT);
         break;
     case EBI_GOTO:
     //TODO SBI_CALL -> SBI_CALL5

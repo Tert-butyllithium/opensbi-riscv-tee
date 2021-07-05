@@ -160,6 +160,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     // if (drv_list != 0 && drv_list[cnt].drv_start != 0) {
         uintptr_t drv_pa_start = PAGE_DOWN(drv_list[0].drv_start - EDRV_VA_PA_OFFSET);
         uintptr_t drv_pa_end = PAGE_UP(((uintptr_t)drv_list) + 64 * sizeof(drv_addr_t));
+        size_t n_drv_pages = (drv_pa_end - drv_pa_start) >> 12;
         printd("[init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
         printd("[init_mem] n_drv_pages = %d\n", n_drv_pages);
         map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, n_drv_pages, PTE_V | PTE_R | PTE_X);
@@ -175,9 +176,9 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 
     /* user stack R/W */
     size_t n_user_stack_pages = (PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 1;
-    // printd("we need %d pages\n", n_user_stack_pages);
+    printd("[init_mem] user stack needs %d pages\n", n_user_stack_pages);
     uintptr_t usr_sp = prog_brk + EUSR_STACK_SIZE * EUSR_HEAP_STACK_RATIO;
-    // printd("user stack: 0x%x - 0x%x -> 0x%x\n", usr_sp, usr_sp + EUSR_STACK_SIZE);
+    printd("user stack: 0x%x - 0x%x\n", usr_sp, usr_sp + EUSR_STACK_SIZE);
     alloc_page((pte*)pt_root, usr_sp, n_user_stack_pages,
         PTE_V | PTE_W | PTE_R | PTE_U, USR);
     usr_sp += EUSR_STACK_SIZE;

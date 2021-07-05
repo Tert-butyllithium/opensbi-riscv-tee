@@ -76,26 +76,39 @@ void init_other_driver() {
 	})
 
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
-    printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
-    printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
-    printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
+	printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
+	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
+	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
-    uintptr_t *ptr = (uintptr_t*)0xc0706410; // &drv_addr_list
-    uintptr_t content = *ptr;
-    printd("[prepare_boot] memory dump of %p: 0x%lx\n", ptr, content);
+	uintptr_t *ptr = (uintptr_t*)0xc0706410; // &drv_addr_list
+	uintptr_t content = *ptr;
+	printd("[prepare_boot] memory dump of %p: 0x%lx\n", ptr, content);
 
-    // SBI_ECALL(0xdeadbeaf,0x40706410,0,0);
-    // printd("[prepare_boot] 0x%lx\n",*(unsigned long * )0x40706408);
-    init_other_driver();
-    // printd("[prepare_boot] 1\n");
-    /* allow S mode access U mode memory */
-    uintptr_t sstatus = read_csr(sstatus);
-    sstatus |= SSTATUS_SUM;
-    write_csr(sstatus, sstatus);
-    usr_sp = init_usr_stack(usr_sp);
-    /* allow S mode trap/interrupt */
-    uintptr_t sie = SIE_SEIE | SIE_SSIE;
-    write_csr(sie, sie);
+	// SBI_ECALL(0xdeadbeaf,0x40706410,0,0);
+	// printd("[prepare_boot] 0x%lx\n",*(unsigned long * )0x40706408);
+	init_other_driver();
+
+
+	printd("[prepare_boot]\n");
+	uintptr_t vir_addr = 0x100c0;
+	uintptr_t phy_addr = get_pa(vir_addr);
+	printd("[prepare_boot] 0x%lx -> 0x%lx\n", vir_addr, phy_addr);
+
+	vir_addr = 0x6af28;
+	phy_addr = get_pa(vir_addr);
+	printd("[prepare_boot] 0x%lx -> 0x%lx\n", vir_addr, phy_addr);
+
+	// printd("[prepare_boot] 1\n");
+	/* allow S mode access U mode memory */
+	uintptr_t sstatus = read_csr(sstatus);
+	printd("[prepare_boot] sstatus = 0x%lx\n", sstatus);
+	sstatus |= SSTATUS_SUM;
+	sstatus &= ~SSTATUS_SPP;
+	write_csr(sstatus, sstatus);
+	usr_sp = init_usr_stack(usr_sp);
+	/* allow S mode trap/interrupt */
+	uintptr_t sie = SIE_SEIE | SIE_SSIE;
+	write_csr(sie, sie);
 
 	printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);
 	/* set user entry */

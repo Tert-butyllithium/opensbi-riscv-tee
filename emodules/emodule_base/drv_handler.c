@@ -76,8 +76,10 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         break;
     }
     write_csr(sepc, sepc + 4);
-    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);
+    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
+    // printd("[handle_syscall] before write to sstatus\n");
     write_csr(sstatus, sstatus);
+    // printd("[handle_syscall] after write to sstatus\n");
     regs[A0_INDEX] = retval;
 }
 void unimplemented_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval){

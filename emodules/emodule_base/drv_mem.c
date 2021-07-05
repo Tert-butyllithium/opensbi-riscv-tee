@@ -290,11 +290,8 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
 
-
-    // //WARNING: should remove
-    // ioremap(NULL,0x02500000,4096);
-
-    SBI_CALL5(0xdeadbeaf,drv_addr_list,0,0,0);
+    // SBI_CALL5(0xdeadbeaf,drv_addr_list,0,0,0);
+    printd("\033[0;32m[init_mem] 0x%x \n\033[0m",usr_pc);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

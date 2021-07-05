@@ -274,7 +274,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
 
-    map_page(NULL, 0xd0000000, 0x10000000, 1, 0);
+    // map_page(NULL, 0xd0000000, 0x10000000, 1, 0);
 
     /* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);

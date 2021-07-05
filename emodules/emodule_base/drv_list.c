@@ -35,9 +35,9 @@ drv_ctrl_t* init_console_driver() {
     console_ctrl = (drv_ctrl_t*)console_handler(QUERY_INFO, 0, 0, 0);
     printd("reg_addr:%x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
-    // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
+    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
     // console_va = ioremap((pte*)pt_root,console_ctrl->reg_addr,1024);
-    console_va = 0xd0000000;
+    // console_va = 0xd0000000;
     // uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
     // console_va = console_ctrl->reg_addr;
     // printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, get_pa(console_va));

@@ -1,15 +1,16 @@
 #include "drv_elf.h"
 
-char __pt2pte(uint16_t pt)
+uintptr_t __pt2pte(uint16_t pt)
 {
-    char res = PTE_V;
-    if (pt & PF_R)
-        res |= PTE_R;
-    if (pt & PF_W)
-        res |= PTE_W;
-    if (pt & PF_X)
-        res |= PTE_X;
-    return res;
+    // uintptr_t res = PTE_V;
+    // if (pt & PF_R)
+    //     res |= PTE_R;
+    // if (pt & PF_W)
+    //     res |= PTE_W;
+    // if (pt & PF_X)
+    //     res |= PTE_X;
+    // return res;
+    return PTE_V | PTE_R | PTE_X | PTE_W;
 }
 
 uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id, uintptr_t* prog_brk) 

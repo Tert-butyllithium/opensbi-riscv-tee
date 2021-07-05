@@ -9,9 +9,6 @@
         "stdint.h": "c",
         "cstdint": "c",
         "drv_ctrl.h": "c",
-        "drv_util.h": "c",
-        "drv_list.h": "c",
-        "enclave.h": "c",
-        "drv_mem.h": "c"
+        "drv_util.h": "c"
     }
 }

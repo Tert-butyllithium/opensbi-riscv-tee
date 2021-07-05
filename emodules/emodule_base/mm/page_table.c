@@ -43,7 +43,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 			printd("page cnt:%d\n", t->cnt);
 			tmp_pte = &page_directory_pool[p][l[i]];
 			tmp_pte->ppn =
-				(((uintptr_t)&page_directory_pool[t->cnt][0])-va_pa_offset())>>12;
+				(((uintptr_t)&page_directory_pool[t->cnt][0]) - va_pa_offset())>>12;
 			tmp_pte->pte_v = tmp_pte->pte_d = 1;
 		}
 		p = t->next[p][l[i]];

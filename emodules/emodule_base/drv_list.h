@@ -12,7 +12,7 @@
 
 typedef drv_ctrl_t* (*drv_initer) ();
 
-extern drv_ctrl_t* drv_list[MAX_DRV];
+extern drv_ctrl_t* peri_reg_list[MAX_DRV];
 extern drv_initer drv_init_list[MAX_DRV];
 extern drv_addr_t* drv_addr_list;
 

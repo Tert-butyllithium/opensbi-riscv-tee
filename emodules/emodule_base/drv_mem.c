@@ -247,10 +247,7 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
 
     /* base driver remaining mem */
     /* thus easier manupilating satp */
-    printd("drv.remain: 0x%x - 0x%x -> 0x%x\n", base_avail_start,
-    base_avail_start+PAGE_DOWN(base_avail_size), __pa(base_avail_start));
 
-    asm volatile("li a7, 0x11223344");
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + base_avail_start,
         base_avail_start, PAGE_DOWN(base_avail_size) >> EPAGE_SHIFT,
         PTE_V | PTE_W | PTE_R);
@@ -275,6 +272,9 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     // enclave_id = 114514;
     // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
+
+
+    map_page(NULL, 0xd0000000, 0x10000000, 1, 0);
 
     /* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);

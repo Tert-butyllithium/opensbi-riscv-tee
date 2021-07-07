@@ -34,12 +34,11 @@ int ebi_brk(uintptr_t addr) {
     uintptr_t n_pages, pa;
     if(addr == 0)
         return prog_brk;
-    printd("####### brk start########\n");
+    printd("####### brk start, prog_brk: 0x%x########\n",prog_brk);
     printd("addr: 0x%lx\n",addr);
     if (addr > PAGE_UP(prog_brk)) {
         n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
-        pa = alloc_page((pte*)pt_root, PAGE_DOWN(addr), n_pages, PTE_U | PTE_R | PTE_W, USR);
-        printd("pa: 0x%lx, n_pages: 0x%lx\n",pa,n_pages);
+        pa = alloc_page((pte*)pt_root, PAGE_UP(prog_brk), n_pages, PTE_U | PTE_R | PTE_W, USR);
     }
     prog_brk = addr;
     printd("####### brk end########\n");

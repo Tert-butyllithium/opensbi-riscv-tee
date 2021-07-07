@@ -7,3 +7,4 @@ qemu-system-riscv64 -M virt -m 256M -nographic \
 
 #mount -t proc p /proc
 #mount -t sysfs sysfs /sys
+#mknod /dev/null c 1 3

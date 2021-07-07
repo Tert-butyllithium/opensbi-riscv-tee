@@ -36,12 +36,12 @@ void handle_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 	SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
 }
 
-void handle_syscall(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
-		    uintptr_t stval)
-{
-	uintptr_t sstatus = read_csr(sstatus);
-	sstatus |= SSTATUS_SUM;
-	write_csr(sstatus, sstatus);
+void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
+    printd("[handle_syscall] sepc: 0x%x\n",sepc);
+
+    uintptr_t sstatus = read_csr(sstatus);
+    // sstatus |= SSTATUS_SUM;
+    // write_csr(sstatus, sstatus);
 
 	if (scause != CAUSE_USER_ECALL) {
 		handle_exception(regs, scause, sepc, stval);

@@ -79,6 +79,41 @@ uintptr_t get_page_table_root()
 	return (uintptr_t)&page_directory_pool[0][0];
 }
 
+uintptr_t print_pte(uintptr_t va){
+		uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
+			  (va & MASK_L0) >> 12 };
+	pte entry;
+	pte *root = (void*) get_page_table_root();
+	pte tmp_entry;
+	uintptr_t tmp;
+	int i = 0;
+	while (1) {
+		tmp_entry = root[l[i]];
+		if (!tmp_entry.pte_v) {
+			printd("ERROR: va:0x%lx is not valid!!!\n", va);
+			return 0;
+		}
+		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
+			break;
+		}
+		tmp  = tmp_entry.ppn << 12;
+		root = (pte *)(tmp + va_pa_offset());
+		i++;
+	}
+	printd("##########PRINT PTE @ %x############\n",va);
+	printd("PTE stored @ %p\n",root);
+	printd("PTE ppn: %x\n",tmp_entry.ppn);
+	printd("PTE pte_v: %x\n",tmp_entry.pte_v);
+	printd("PTE pte_r: %x\n",tmp_entry.pte_r);
+	printd("PTE pte_w: %x\n",tmp_entry.pte_w);
+	printd("PTE pte_x: %x\n",tmp_entry.pte_x);
+	printd("PTE pte_u: %x\n",tmp_entry.pte_u);
+	printd("PTE pte_g: %x\n",tmp_entry.pte_g);
+	printd("PTE pte_a: %x\n",tmp_entry.pte_a);
+	printd("PTE pte_d: %x\n",tmp_entry.pte_d);
+	printd("##########PRINT PTE END#################\n");
+}
+
 uintptr_t get_pa(uintptr_t va)
 {
 	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
@@ -153,9 +188,10 @@ uintptr_t alloc_page(pte *root, uintptr_t va, size_t n_pages, uintptr_t attr,
 		pa = spa_get_pa_zero(id);
 		page_directory_insert(va, pa, 3, attr);
 		va += EPAGE_SIZE;
-		pa += EPAGE_SIZE;
+		// pa += EPAGE_SIZE;
 		n_pages--;
 	}
+	return pa;
 }
 
 void all_zero()

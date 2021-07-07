@@ -68,6 +68,10 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	if(attr & PTE_X){
 		tmp_pte->pte_x = 1;
 	}
+	flush_tlb();
+	flush_tlb();
+	flush_tlb();
+
 	return *((uintptr_t *)tmp_pte);
 }
 
@@ -113,6 +117,16 @@ uintptr_t get_pa(uintptr_t va)
 	else {
 		return 0;
 	}
+}
+
+void test_va(uintptr_t va)
+{
+	uintptr_t *content = (uintptr_t *)va;
+	uintptr_t pa = get_pa(va);
+	printd("[test_va] va: 0x%lx --> pa: 0x%lx\n", va, pa);
+	print_pte(va);
+	if (read_csr(satp))
+		printd("[test_va] content: 0x%lx\n", *content);
 }
 
 void print_pte(uintptr_t va)
@@ -180,9 +194,10 @@ uintptr_t alloc_page(pte *root, uintptr_t va, size_t n_pages, uintptr_t attr,
 
 	while (n_pages >= 1) {
 		pa = spa_get_pa_zero(id);
+		printd("[alloc_page]alloc_page(nullptr,0x%lx,%d,0);\n",va,n_pages);
+		printd("[alloc_page] pa = 0x%lx\n", pa);
 		page_directory_insert(va, pa, 3, attr);
 		va += EPAGE_SIZE;
-		pa += EPAGE_SIZE;
 		n_pages--;
 	}
 

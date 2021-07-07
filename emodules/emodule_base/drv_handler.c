@@ -34,18 +34,18 @@ void handle_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr
 }
 
 void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-    printd("[handle_syscall] cp1\n");
+    printd("[handle_syscall] sepc: 0x%x\n",sepc);
+
     uintptr_t sstatus = read_csr(sstatus);
-    sstatus |= SSTATUS_SUM;
-    write_csr(sstatus, sstatus);
+    // sstatus |= SSTATUS_SUM;
+    // write_csr(sstatus, sstatus);
 
     if(scause != CAUSE_USER_ECALL) {
         handle_exception(regs, scause, sepc, stval);
     }
 
     uintptr_t which = regs[A7_INDEX], arg_0 = regs[A0_INDEX], arg_1 = regs[A1_INDEX], retval = 0;
-    printd("[handle_syscall] cp2\n");
-
+    printd("[handle_syscall] which: %d\n",which);
     switch (which)
     {
     case SYS_fstat:
@@ -82,8 +82,9 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
     printd("[handle_syscall] before writing sepc: sepc = 0x%lx\n", sepc);
     write_csr(sepc, sepc + 4);
     sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
+    // printd("[handle_syscall] before write to sstatus\n");
     write_csr(sstatus, sstatus);
-    printd("[handle_syscall] cp3\n");
+    printd("[handle_syscall] after write to sstatus\n");
     regs[A0_INDEX] = retval;
 }
 void unimplemented_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval){

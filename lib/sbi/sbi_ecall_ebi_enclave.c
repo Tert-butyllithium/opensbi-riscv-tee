@@ -378,7 +378,7 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	context->enclave_binary_size = binary_size;
 	context->drv_list	     = start_addr;
 	context->user_param	     = start_addr + drv_size;
-	args[0]			     = avail_id;
+	// args[0]			     = avail_id;
 	return avail_id;
 }
 
@@ -414,6 +414,7 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 
 
 	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
+	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
 
 	regs->a0 = id;
 	regs->a1 = into->pa;
@@ -491,38 +492,39 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs)
 	return 0;
 }
 
-extern char _drv_console_start, _drv_console_end;
-extern char _drv_rtc_start, _drv_rtc_end;
-// drv_addr_t bbl_addr_list[MAX_DRV] = {
-//     {(uintptr_t)&_drv_console_start, (uintptr_t)&_drv_console_end, -1},
+extern char _console_start, _console_end;
+// extern char _drv_rtc_start, _drv_rtc_end;
+drv_addr_t bbl_addr_list[MAX_DRV] = {
+    {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1}
 //     {(uintptr_t)&_drv_rtc_start, (uintptr_t)&_drv_rtc_end, -1}
-// };
+};
 
-drv_addr_t bbl_addr_list[MAX_DRV] = {};
+// drv_addr_t bbl_addr_list[MAX_DRV] = {};
 
 uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 {
-	drv_addr_t drv_addr_list[64] = {};
+	drv_addr_t _local_drv_addr_list[64] = {};
 	int cnt			     = 0;
 	for (int i = 0; i < MAX_DRV; i++) {
 		if (bbl_addr_list[i].drv_start && (bitmask & (1 << i))) {
+			sbi_printf("[drvcpy] cnt = %d\n", cnt);
 			uintptr_t drv_start = bbl_addr_list[i].drv_start;
 			uintptr_t drv_size  = bbl_addr_list[i].drv_end -
 					     bbl_addr_list[i].drv_start;
-			drv_addr_list[cnt].drv_start = *start_addr;
-			drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
-			sbi_printf("drv %d: start = %lx end = %lx\n", i,
-				   drv_addr_list[cnt].drv_start,
-				   drv_addr_list[cnt].drv_end);
+			_local_drv_addr_list[cnt].drv_start = *start_addr;
+			_local_drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
+			sbi_printf("[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n", i,
+				   _local_drv_addr_list[cnt].drv_start,
+				   _local_drv_addr_list[cnt].drv_end);
 			cnt++;
 			sbi_memcpy((void *)(*start_addr), (void *)drv_start,
 			       drv_size);
 			*start_addr += drv_size;
 		}
 	}
-	sbi_memcpy((void *)*start_addr, (void *)drv_addr_list,
-	       sizeof(drv_addr_list));
-	return sizeof(drv_addr_list);
+	sbi_memcpy((void *)*start_addr, (void *)_local_drv_addr_list,
+	       sizeof(_local_drv_addr_list));
+	return sizeof(_local_drv_addr_list);
 }
 
 char drvfetch(int enclave_id, int driver_id)

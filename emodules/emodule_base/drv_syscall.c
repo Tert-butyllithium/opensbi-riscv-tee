@@ -3,9 +3,10 @@
 #ifndef __ASSEMBLER__
 #include "drv_mem.h"
 #endif
-#include "drv_page_pool.h"
+#include "mm/drv_page_pool.h"
 #include "drv_base.h"
 #include "drv_list.h"
+#include "../drv_console/drv_console.h"
 
 extern uintptr_t prog_brk;
 extern uintptr_t pt_root;
@@ -30,30 +31,35 @@ int ebi_fstat(uintptr_t fd, uintptr_t sstat) {
 }
 
 int ebi_brk(uintptr_t addr) {
+    uintptr_t n_pages, pa;
     if(addr == 0)
         return prog_brk;
+    printd("####### brk start, prog_brk: 0x%x########\n",prog_brk);
+    printd("addr: 0x%lx\n",addr);
     if (addr > PAGE_UP(prog_brk)) {
-        uintptr_t n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
-        uintptr_t pa = alloc_page((pte*)pt_root, PAGE_DOWN(addr), n_pages, PTE_U | PTE_R | PTE_W, USR);
+        n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
+        alloc_page((pte*)pt_root, PAGE_UP(prog_brk), n_pages, PTE_U | PTE_R | PTE_W, USR);
     }
     prog_brk = addr;
+    printd("####### brk end########\n");
     flush_tlb();
     return addr;
 }
 
 int ebi_write(uintptr_t fd, uintptr_t content) {
     /* stdout */
-    // SBI_CALL(EBI_FETCH, enclave_id, 0, 0);
-    // cmd_handler console_handler = (cmd_handler)drv_addr_list[DRV_CONSOLE].drv_start;
-    // if (fd == 1) {
-    //     char* str = (char*)content;
-    //     while(*str) {
-    //         console_handler(CONSOLE_CMD_PUT, *str, 0, 0);
-    //         *str = 0;
-    //         str++;
-    //     }
-    // }
-    // SBI_CALL(EBI_RELEASE, enclave_id, 0, 0);
+    printd("[ebi_write]\n");
+    // SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_FETCH);
+    cmd_handler console_handler = (cmd_handler)drv_addr_list[DRV_CONSOLE].drv_start;
+    if (fd == 1) {
+        char* str = (char*)content;
+        while(*str) {
+            console_handler(CONSOLE_CMD_PUT, *str, 0, 0);
+            *str = 0;
+            str++;
+        }
+    }
+    // SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_RELEASE);
     return 0;
 }
 

@@ -179,6 +179,9 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
+	if (ret)
+		return ret;
+	ret = sbi_ecall_register_extension(&ecall_debug);
 	init_enclaves();
 	sbi_printf("############### init ecall_ebi successfully\n");
 	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);

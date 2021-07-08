@@ -6,15 +6,16 @@
 #include "drv_base.h"
 
 void handle_interrupt(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-    printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
 
     // uintptr_t sip, sie;
     switch (scause)
     {
     case IRQ_S_TIMER:
+        printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
         clear_csr(sip, SIP_STIP);
         break;
     case IRQ_S_SOFT:
+        printd("handler_interrupt 0x%08x 0x%08x  0x%08x!\n", scause, sepc, stval);
         clear_csr(sip, SIP_SSIP);
         break;
     case IRQ_S_EXT:
@@ -33,16 +34,18 @@ void handle_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr
 }
 
 void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
+    printd("[handle_syscall] sepc: 0x%x\n",sepc);
+
     uintptr_t sstatus = read_csr(sstatus);
-    sstatus |= SSTATUS_SUM;
-    write_csr(sstatus, sstatus);
+    // sstatus |= SSTATUS_SUM;
+    // write_csr(sstatus, sstatus);
 
     if(scause != CAUSE_USER_ECALL) {
         handle_exception(regs, scause, sepc, stval);
     }
 
     uintptr_t which = regs[A7_INDEX], arg_0 = regs[A0_INDEX], arg_1 = regs[A1_INDEX], retval = 0;
-
+    printd("[handle_syscall] which: %d\n",which);
     switch (which)
     {
     case SYS_fstat:
@@ -62,7 +65,8 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         break;
     case SYS_exit:
         // SBI_CALL(EBI_EXIT, enclave_id, arg_0, 0);
-        SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
+        printd("[handle_syscall] SYS_exit\n");
+        SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, EBI_EXIT);
         break;
     case EBI_GOTO:
     //TODO SBI_CALL -> SBI_CALL5
@@ -74,8 +78,10 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         break;
     }
     write_csr(sepc, sepc + 4);
-    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SUM);
+    sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
+    // printd("[handle_syscall] before write to sstatus\n");
     write_csr(sstatus, sstatus);
+    printd("[handle_syscall] after write to sstatus\n");
     regs[A0_INDEX] = retval;
 }
 void unimplemented_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval){

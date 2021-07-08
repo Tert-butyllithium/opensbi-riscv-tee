@@ -112,7 +112,7 @@ ret_to_usr:
     .globl  _start
 _start:
     /* use a tmp handler to adjust pc */
-    la      s7, adjust_pc
+    la      s7, 2f
     li      s6, EDRV_VA_PA_OFFSET
     add     s7, s7, s6
     csrw    stvec,  s7
@@ -123,6 +123,7 @@ _start:
     mv      sp, a1
     sfence.vma
     csrw    satp, a0
+2:
     sfence.vma
 
     /* switch to trap handler */
@@ -135,11 +136,4 @@ _start:
     jal     prepare_boot
     csrrw   sp, sscratch, sp
 
-    sret
-
-adjust_pc:
-    csrr    a5, sepc
-    li      a6, EDRV_VA_PA_OFFSET
-    add     a5, a5, a6
-    csrw    sepc, a5
     sret

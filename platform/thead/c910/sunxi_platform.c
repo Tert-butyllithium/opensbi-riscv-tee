@@ -113,7 +113,7 @@ static int sunxi_console_init(void)
 
 	port_num = try_uart_port();
 	uart_base = SUNXI_UART_BASE + port_num * SUNXI_UART_ADDR_OFFSET;
-
+	
 	return sunxi_uart_init(uart_base);
 }
 

@@ -88,4 +88,9 @@
 		*(.drvbase)
 	}
 
+	.drvconsole :
+	{
+		*(.drvconsole)
+	}
+
 	

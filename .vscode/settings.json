@@ -4,6 +4,11 @@
         "sbi_ecall.h": "c",
         "sbi_error.h": "c",
         "type_traits": "c",
-        "sbi_ecall_ebi_enclave.h": "c"
+        "sbi_ecall_ebi_enclave.h": "c",
+        "drv_console.h": "c",
+        "stdint.h": "c",
+        "cstdint": "c",
+        "drv_ctrl.h": "c",
+        "drv_util.h": "c"
     }
 }

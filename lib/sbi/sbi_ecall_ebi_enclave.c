@@ -417,12 +417,13 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
 
 	regs->a0 = id;
-	regs->a1 = into->pa;
-	regs->a2 = into->enclave_binary_size;
-	regs->a3 = into->drv_list;
+	regs->a1 = id;
+	regs->a2 = into->pa;
+	regs->a3 = into->enclave_binary_size;
+	regs->a4 = into->drv_list;
 	into->status   = ENC_RUN;
 	from->status   = ENC_IDLE;
-	return regs->a0;
+	return id;
 }
 
 uintptr_t exit_enclave(struct sbi_trap_regs *regs)
@@ -430,6 +431,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	uintptr_t id = regs->a0, retval = regs->a1;
 
 	enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
+	sbi_printf("into->mstatus: %lx",into->ns_mstatus);
 	if (from->status != ENC_RUN || into->status != ENC_IDLE)
 		return EBI_ERROR;
 

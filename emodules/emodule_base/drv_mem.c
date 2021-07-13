@@ -206,6 +206,18 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
+    uintptr_t mem_alloc_ret;
+    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
+    printd("[init_mem] mem alloc result: allocated section pa: 0x%lx\n",
+                mem_alloc_ret);
+    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
+    printd("[init_mem] mem alloc result: allocated section pa: 0x%lx\n",
+                mem_alloc_ret);
+
+    // map_page(NULL, 0xd0000000, 0x10000000, 1, 0);
+
     /* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);
 	sstatus |= SSTATUS_SUM;

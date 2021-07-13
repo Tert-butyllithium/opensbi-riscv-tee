@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define SECTION_SHIFT	  27
+#define SECTION_SHIFT	  26
 #define SECTION_SIZE	  (1UL << SECTION_SHIFT)  // 0x800_0000
 
 // make sure these addresses are section aligned

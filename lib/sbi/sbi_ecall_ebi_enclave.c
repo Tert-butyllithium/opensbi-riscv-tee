@@ -5,6 +5,7 @@
 #include <sbi/sbi_string.h>
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_hart.h>
+#include <sbi/sbi_ecall_ebi_mem.h>
 
 #define MAX_PAGE 8192
 static enclave_page_t pages[MAX_PAGE];
@@ -341,6 +342,7 @@ uintptr_t find_avail_enclave()
 void init_enclaves(void)
 {
 	enclave_mem_init();
+	init_memory_pool();
 	sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
 	enclaves[NUM_ENCLAVE].status = ENC_RUN;
 	for (size_t i = 0; i < NUM_ENCLAVE; ++i)

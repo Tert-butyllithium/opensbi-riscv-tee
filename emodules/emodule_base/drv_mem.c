@@ -76,13 +76,13 @@ uintptr_t pt_root;
 
 // #define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
 
-#define SBI_CALL5(___which, ___arg0, ___arg1, ___arg2, ___arg3)          \
+#define SBI_CALL5(___extid, ___arg0, ___arg1, ___arg2, ___funid)          \
 	({                                                               \
 		register uintptr_t a0 asm("a0") = (uintptr_t)(___arg0);  \
 		register uintptr_t a1 asm("a1") = (uintptr_t)(___arg1);  \
 		register uintptr_t a2 asm("a2") = (uintptr_t)(___arg2);  \
-		register uintptr_t a6 asm("a6") = (uintptr_t)(___arg3);  \
-		register uintptr_t a7 asm("a7") = (uintptr_t)(___which); \
+		register uintptr_t a6 asm("a6") = (uintptr_t)(___funid);  \
+		register uintptr_t a7 asm("a7") = (uintptr_t)(___extid); \
 		asm volatile("ecall"                                     \
 			     : "+r"(a0)                                  \
 			     : "r"(a1), "r"(a2), "r"(a6), "r"(a7)        \
@@ -273,6 +273,15 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
+    uintptr_t mem_alloc_ret;
+    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
+    printd("[init_mem] mem alloc result: allocated section pa: 0x%lx\n",
+                mem_alloc_ret);
+    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
+    printd("[init_mem] mem alloc result: allocated section pa: 0x%lx\n",
+                mem_alloc_ret);
 
     // map_page(NULL, 0xd0000000, 0x10000000, 1, 0);
 

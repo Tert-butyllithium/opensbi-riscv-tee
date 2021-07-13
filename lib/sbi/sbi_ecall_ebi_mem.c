@@ -21,7 +21,7 @@ struct section memory_pool[MEMORY_POOL_SECTION_NUM];
 static struct section *find_avail_section(void);
 static void withdraw_pmp(struct section *sec);
 
-__unused uintptr_t alloc_mem_for_enclave(int eid)
+uintptr_t alloc_mem_for_enclave(int eid)
 {
 	struct section *sec;
 	uintptr_t mstatus = csr_read(mstatus);
@@ -50,7 +50,7 @@ __unused void init_memory_pool()
 	struct section *sec;
 
 	for_each_section_in_pool(memory_pool, sec, i) {
-		sec->sfn = MEMORY_POOL_START + i * SECTION_SIZE;
+		sec->sfn = (MEMORY_POOL_START + i * SECTION_SIZE) >> SECTION_SHIFT;
 		sec->owner = -1;
 	}
 

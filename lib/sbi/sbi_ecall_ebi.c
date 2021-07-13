@@ -6,9 +6,16 @@
 #include <sbi/sbi_version.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
+#include <sbi/sbi_ecall_ebi_mem.h>
 
 extern char _base_start, _base_end;
 extern char _enclave_start, _enclave_end;
+
+static int hartid_to_eid(int hartid)
+{
+    // to be done
+    return 0;
+}
 
 static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 unsigned long extid, unsigned long funcid,
@@ -48,6 +55,13 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[sbi_ecall_ebi_handler] exit\n");
         exit_enclave(regs);
 	    return ret;
+
+    case SBI_EXT_EBI_MEM_ALLOC:
+        sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
+        int eid = hartid_to_eid(core);
+        uintptr_t pa = alloc_mem_for_enclave(eid); // pa should be passed to enclave by regs
+        regs->a1 = pa;
+        return ret;
     }
 
 

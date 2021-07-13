@@ -77,9 +77,10 @@
 #define SBI_EXT_EBI_CREATE  399
 #define SBI_EXT_EBI_ENTER   400
 #define SBI_EXT_EBI_EXIT    401
-#define SBI_EXT_EBI_GOTO    402
-#define SBI_EXT_EBI_FETCH   403
-#define SBI_EXT_EBI_RELEASE 404
+// #define SBI_EXT_EBI_GOTO    402
+// #define SBI_EXT_EBI_FETCH   403
+// #define SBI_EXT_EBI_RELEASE 404
+#define SBI_EXT_EBI_MEM_ALLOC 405
 
 #define SBI_EXT_EBI_PUTS    410
 #define SBI_EXT_EBI_GETS    411

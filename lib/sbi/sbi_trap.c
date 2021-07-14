@@ -18,6 +18,7 @@
 #include <sbi/sbi_misaligned_ldst.h>
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 
 static void __noreturn sbi_trap_error(const char *msg, int rc, u32 hartid,
 				      ulong mcause, ulong mtval, ulong mtval2,
@@ -67,6 +68,28 @@ static void __noreturn sbi_trap_error(const char *msg, int rc, u32 hartid,
 		   regs->t6);
 
 	sbi_hart_hang();
+}
+
+
+
+/**
+ * Test if this exception is due to PMP
+ * 
+ * @param addr the address try to access
+ * @param 
+ * 
+ */ 
+peri_addr_t* pmp_exception_handle(uintptr_t addr, uint32_t hartid){
+	int i = 0;
+	enclave_context* context = &enclaves[enclave_on_core[hartid]];
+	sbi_printf("[pmp_exception_handle] context id: %ld, peri_cnt: %d \n", context->id, context->peri_cnt);
+	for(; i < context->peri_cnt; i++){
+		sbi_printf("[pmp_exception_handle] %lx~%lx\n",context->peri_list[i].reg_va_start, context->peri_list[i].reg_va_start + context->peri_list[i].reg_size);
+		if(addr >= context->peri_list[i].reg_va_start && addr < context->peri_list[i].reg_va_start + context->peri_list[i].reg_size){
+			return &context->peri_list[i];
+		}
+	}
+	return NULL;
 }
 
 /**
@@ -221,6 +244,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 	ulong mcause = csr_read(CSR_MCAUSE);
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	struct sbi_trap_info trap, *uptrap;
+	__attribute__((unused)) peri_addr_t* pmp_test = NULL;
 	// ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
 	if (misa_extension('H')) {
@@ -249,18 +273,21 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 		rc  = sbi_illegal_insn_handler(hartid, mcause, mtval,
 					       regs, scratch);
 		msg = "illegal instruction handler failed";
+		sbi_printf("%s\n",msg);
 		break;
 	case CAUSE_MISALIGNED_LOAD:
 		rc = sbi_misaligned_load_handler(hartid, mcause, mtval,
 						 mtval2, mtinst, regs,
 						 scratch);
 		msg = "misaligned load handler failed";
+		sbi_printf("%s\n",msg);
 		break;
 	case CAUSE_MISALIGNED_STORE:
 		rc  = sbi_misaligned_store_handler(hartid, mcause, mtval,
 						   mtval2, mtinst, regs,
 						   scratch);
 		msg = "misaligned store handler failed";
+		sbi_printf("%s\n",msg);
 		break;
 	case CAUSE_SUPERVISOR_ECALL:
 	case CAUSE_HYPERVISOR_ECALL:
@@ -269,6 +296,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 			// sbi_printf("previous mode is %lu\n", prev_mode);
 		rc  = sbi_ecall_handler(hartid, mcause, regs, scratch);
 		msg = "ecall handler failed";
+		// sbi_printf("%s\n",msg);
 		break;
 	case CAUSE_LOAD_ACCESS:
 	case CAUSE_STORE_ACCESS:
@@ -276,6 +304,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 	case CAUSE_STORE_PAGE_FAULT:
 		uptrap = sbi_hart_get_trap_info(scratch);
 		if ((regs->mstatus & MSTATUS_MPRV) && uptrap) {
+			sbi_printf("upper branch\n");
 			rc = 0;
 			uptrap->epc = regs->mepc;
 			regs->mepc += 4;
@@ -291,7 +320,15 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 			trap.tinst = mtinst;
 			rc = sbi_trap_redirect(regs, &trap, scratch);
 		}
+		if ((pmp_test = pmp_exception_handle(csr_read(CSR_STVAL), hartid))!=NULL) {
+			sbi_printf("\033[0;34m[sbi_trap_handle] addr in peri mepc: 0x%lx\n\033[0m", csr_read(CSR_MEPC));
+			pmp_allow_access(pmp_test);
+			regs->mepc = csr_read(CSR_MEPC);
+			// regs->mstatus &= ~ (3 << MSTATUS_MPP_SHIFT);
+			// break;
+		}
 		msg = "page/access fault handler failed";
+		sbi_printf("%s at 0x%lx, sepc=0x%lx\n",msg, csr_read(CSR_STVAL), csr_read(CSR_SEPC));
 		break;
 	default:
 		/* If the trap came from S or U mode, redirect it there */

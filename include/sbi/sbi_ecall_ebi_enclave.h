@@ -135,6 +135,7 @@
 #define EDRV_VA_START    0xC0000000
 #define EDRV_DRV_START   0xD0000000
 #define EDRV_VA_PA_OFFSET     (EDRV_VA_START - EDRV_PA_START)
+#define PERI_NUM_MAX 128
 
 #define EUSR_VA_START    0x0
 
@@ -142,6 +143,14 @@
 #include <stddef.h>
 #include <sbi/riscv_atomic.h>
 #include <sbi/sbi_trap.h>
+
+typedef struct
+{
+  uintptr_t reg_pa_start;
+  uintptr_t reg_va_start;
+  uintptr_t reg_size;
+  int using_by;
+} peri_addr_t;
 
 typedef struct {
     uintptr_t id;
@@ -162,6 +171,8 @@ typedef struct {
     uintptr_t drv_list;
     uintptr_t user_param;
     uintptr_t umode_context[MAX_INDEX];
+    peri_addr_t peri_list[PERI_NUM_MAX];
+    uint8_t peri_cnt;
     char status;
 } enclave_context;
 void pmp_switch(enclave_context *context);
@@ -205,6 +216,13 @@ typedef struct
 
 
 
+#define NUM_ENCLAVE 10
+#define NUM_CORES 10
+
+extern enclave_context enclaves[NUM_ENCLAVE + 1];
+extern int enclave_on_core[NUM_CORES]; 
+
+
 #define MAX_DRV  64
 #define QUERY_INFO -1
 
@@ -212,6 +230,8 @@ extern drv_addr_t bbl_addr_list[64];
 uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask);
 char drvfetch(int drv_id, int enclave_id);
 void drvrelease(int drv_id, int enclave_id);
+void inform_peri(struct sbi_trap_regs *regs);
+void pmp_allow_access(peri_addr_t* peri);
 
 // Currently, interrupts are always disabled in M-mode.
 #define disable_irqsave() (0)

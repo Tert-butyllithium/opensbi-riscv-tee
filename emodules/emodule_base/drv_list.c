@@ -40,35 +40,26 @@ drv_ctrl_t* init_console_driver() {
     // printd("[init_console_driver] drv_size: 0x%lx, n_console_drv_pages: 0x%lx at %p\n",console_drv_size, n_console_drv_pages, &n_console_drv_pages);
  
     // map_page((pte *)pt_root, drv_console_start, drv_console_start - EDRV_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
-    printd("[init_console_driver] after map_page\n");
+    // printd("[init_console_driver] after map_page\n");
     
     console_handler = (cmd_handler)drv_console_start;
 
     console_ctrl = (drv_ctrl_t*)console_handler(QUERY_INFO, 0, 0, 0);
-    printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
+    // printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
     // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-    console_va = ioremap((pte*)pt_root,console_ctrl->reg_addr,1024);
+    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, 1024);
+    SBI_CALL5(0x19260817, console_ctrl->reg_addr, console_va,
+	      PAGE_UP(console_ctrl->reg_size), 420);
     // console_va = 0xd0000000;
     // uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
     // console_va = console_ctrl->reg_addr;
-    printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, get_pa(console_va));
-    printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",console_handler);
+    // printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va, get_pa(console_va));
+    // printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",console_handler);
     console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 
-    printd("got here 1\n");
-
-    console_handler(CONSOLE_CMD_PUT, 'c', 0,0);
-
-    printd("got here 2\n");
-
-    console_handler(CONSOLE_CMD_PUT, 'o', 0,0);
-    console_handler(CONSOLE_CMD_PUT, 'm', 0,0);
-    console_handler(CONSOLE_CMD_PUT, 'p', 0,0);
-    console_handler(CONSOLE_CMD_PUT, 'a', 0,0);
-    console_handler(CONSOLE_CMD_PUT, 's', 0,0);
-    console_handler(CONSOLE_CMD_PUT, 's', 0,0);
-    console_handler(CONSOLE_CMD_PUT, '\n', 0,0);
+    printd("Console driver init successfully\n");
+    
     return console_ctrl;
 }
 

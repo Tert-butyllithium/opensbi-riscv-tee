@@ -50,10 +50,11 @@ uintptr_t init_usr_stack(uintptr_t usr_sp)
 
 
 void init_other_driver() {
+	// int i = 0;
     // drv_initer local_init[64] = {init_console_driver};
     //                             //  init_rtc_driver};
     // // drv_initer local_init[64] = {0};
-    // for (int i = 0; i < MAX_DRV; i++) {
+    // for (; i < MAX_DRV; i++) {
     //     if (local_init[i]) {
     //         drv_init_list[i] = local_init[i];
     //         peri_reg_list[i] = drv_init_list[i]();

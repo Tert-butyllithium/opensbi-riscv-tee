@@ -12,71 +12,6 @@ uintptr_t prog_brk;
 uintptr_t pt_root;
 uintptr_t drv_start_va;
 
-// pte* get_pte(pte* root, uintptr_t va, char alloc)
-// {
-//     uintptr_t satp = read_csr(satp), free_page, offset = va_pa_offset();
-//     pte* pt = (pte*)((uintptr_t)root + offset);
-//     int i;
-//     for (i = 2; i > 0; i--) {
-//         size_t idx = EPPN(va, i);
-//         if (!(pt[idx] & PTE_V)) {
-//             if (alloc) {
-//                 free_page = spa_get_zero(DRV);
-//                 pt[idx] = PA2PTE(free_page - offset) | PTE_V;
-//                 pt = (pte*)(free_page);
-//             } else
-//                 return 0;
-//         } else {
-//             pt = (pte*)((uintptr_t)PTE2PA(pt[idx]) + offset);
-//         }
-//     }
-//     return (pte*)&pt[EPPN(va, 0)];
-// }
-// void map_page(pte* root, uintptr_t va, uintptr_t pa, size_t n_pages,
-//     uintptr_t attr)
-// {
-//     pte* pt;
-//     size_t i;
-//     for (i  = 0; i < n_pages; i++) {
-//         pt = get_pte(root, va, 1);
-//         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X | PTE_R;
-//         va += EPAGE_SIZE;
-//         pa += EPAGE_SIZE;
-//     }
-// }
-// uintptr_t ioremap(pte* root, uintptr_t pa, size_t size)
-// {
-//     size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
-//     map_page(root, drv_start_va + EDRV_DRV_START, pa, n_pages, PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
-//     uintptr_t cur_addr = drv_start_va + EDRV_DRV_START;
-//     drv_start_va += n_pages << EPAGE_SHIFT;
-//     return cur_addr;
-// }
-
-// uintptr_t alloc_page(pte* root, uintptr_t va, size_t n_pages, uintptr_t attr,
-//     char id)
-// {
-//     pte* pt;
-//     uintptr_t pa;
-//     size_t i;
-//     for (i = 0; i < n_pages; i++) {
-//         pt = get_pte(root, va, 1);
-//         if ((*pt) & PTE_V) {
-//             /* Already mapped */
-//             /* TODO: check if attr are the same */
-//             goto next_page;
-//         }
-//         pa = spa_get_pa_zero(id);
-//         *pt = PA2PTE(pa) | attr | PTE_V | PTE_D | PTE_A | PTE_W | PTE_X;
-// next_page:;
-//         va += EPAGE_SIZE;
-//     }
-//     return pa;
-// }
-
-// #define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
-
-
 #define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
 
 #define SBI_CALL(___which, ___arg0, ___arg1, ___arg2) ({			\
@@ -91,9 +26,9 @@ uintptr_t drv_start_va;
 })
 
 /* Initialize memory for driver, including stack, heap, page table */
-void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
+void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
 {
-    printd("[init_mem] %s %x\n", argv, argc);
+    // printd("[init_mem] %s %x\n", argv, argc);
     printd("[init_mem] id = %d\n", id);
     printd("[init_mem] mem_start = 0x%lx\n", mem_start);
     enclave_id = id;
@@ -269,18 +204,12 @@ void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t 
     uintptr_t satp = pt_root >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
-    // printd("[init_mem] drv_list_addr: 0x%p at 0x%p\n",drv_addr_list, &drv_addr_list);
-    // enclave_id = 114514;
-    // printd("\033[0;32m[init_mem] enclave_id @ 0x%lx at 0x%p\n\033[0m", enclave_id, &enclave_id);
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
     /* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
-
-    // SBI_CALL5(0xdeadbeaf,drv_addr_list,0,0,0);
-    printd("\033[0;32m[init_mem] 0x%x \n\033[0m",usr_pc);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

@@ -85,6 +85,8 @@
 #define SBI_EXT_EBI_PUTS    410
 #define SBI_EXT_EBI_GETS    411
 
+#define SBI_EXT_EBI_PERI_INFORM 420
+
 /* clang-format on */
 
 #endif

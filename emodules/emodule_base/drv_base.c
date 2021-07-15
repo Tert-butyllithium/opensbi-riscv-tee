@@ -50,10 +50,11 @@ uintptr_t init_usr_stack(uintptr_t usr_sp)
 
 
 void init_other_driver() {
+	// int i = 0;
     // drv_initer local_init[64] = {init_console_driver};
     //                             //  init_rtc_driver};
     // // drv_initer local_init[64] = {0};
-    // for (int i = 0; i < MAX_DRV; i++) {
+    // for (; i < MAX_DRV; i++) {
     //     if (local_init[i]) {
     //         drv_init_list[i] = local_init[i];
     //         peri_reg_list[i] = drv_init_list[i]();
@@ -80,23 +81,13 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
 	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
-	uintptr_t *ptr = (uintptr_t*)0xc0706410; // &drv_addr_list
-	uintptr_t content = *ptr;
-	printd("[prepare_boot] memory dump of %p: 0x%lx\n", ptr, content);
+	// uintptr_t *ptr = (uintptr_t*)0xc0706410; // &drv_addr_list
+	// uintptr_t content = *ptr;
+	// printd("[prepare_boot] memory dump of %p: 0x%lx\n", ptr, content);
 
 	// SBI_ECALL(0xdeadbeaf,0x40706410,0,0);
 	// printd("[prepare_boot] 0x%lx\n",*(unsigned long * )0x40706408);
 	init_other_driver();
-
-
-	printd("[prepare_boot]\n");
-	uintptr_t vir_addr = 0x100c0;
-	uintptr_t phy_addr = get_pa(vir_addr);
-	printd("[prepare_boot] 0x%lx -> 0x%lx\n", vir_addr, phy_addr);
-
-	vir_addr = 0x6af28;
-	phy_addr = get_pa(vir_addr);
-	printd("[prepare_boot] 0x%lx -> 0x%lx\n", vir_addr, phy_addr);
 
 	// printd("[prepare_boot] 1\n");
 	/* allow S mode access U mode memory */

@@ -4,10 +4,13 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_string.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/sbi_hart.h>
 
 #define MAX_PAGE 8192
 static enclave_page_t pages[MAX_PAGE];
 static size_t max_pages;
+
+
 
 void poweroff(uint16_t code)
 {
@@ -180,11 +183,12 @@ uintptr_t enclave_mem_free(enclave_context *context)
 	return EBI_OK;
 }
 
-#define NUM_ENCLAVE 2
-static enclave_context enclaves[NUM_ENCLAVE + 1];
+enclave_context enclaves[NUM_ENCLAVE + 1];
+int enclave_on_core[NUM_CORES]; 
 
 void pmp_switch(enclave_context *context)
 {
+	sbi_printf("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
 	uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
 	if (context == NULL) {
 		// Switch to Linux
@@ -195,17 +199,24 @@ void pmp_switch(enclave_context *context)
 		p2  = 0 >> PMP_SHIFT;
 		p3  = -1UL >> PMP_SHIFT;
 		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+
 	} else {
-		// Switch to other enclave
-		p0  = context->pa >> PMP_SHIFT;
-		p1  = (context->pa + context->mem_size) >> PMP_SHIFT;
-		cfg = (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 8;
-		p2  = 0UL >> PMP_SHIFT;
-		p3  = PHY_MEM_START >> PMP_SHIFT;
-		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-		p4 = PHY_MEM_END >> PMP_SHIFT;
-		p5 = -1UL >> PMP_SHIFT;
-		cfg |= (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
+		// Switch to some enclave
+		// p0  = context->pa >> PMP_SHIFT;
+		// p1  = (context->pa + context->mem_size) >> PMP_SHIFT;
+		// cfg = (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 8;
+		
+		// allow (p2~p3)
+		// p2  = 0UL >> PMP_SHIFT;
+		// p3  = PHY_MEM_START >> PMP_SHIFT;
+		// cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+
+		// allow (p4~p5)
+		// p4 = PHY_MEM_END >> PMP_SHIFT;
+		// p5 = -1UL >> PMP_SHIFT;
+		p4 = context->pa >> PMP_SHIFT;
+		p5 = (context->pa + context->mem_size) >> PMP_SHIFT;
+		cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
 	}
 	asm volatile("csrw pmpaddr0, %[p0]\n\t"
 		     "csrw pmpaddr1, %[p1]\n\t"
@@ -216,6 +227,21 @@ void pmp_switch(enclave_context *context)
 		     "csrw pmpcfg0, %[cfg]" ::[p0] "r"(p0),
 		     [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3), [p4] "r"(p4),
 		     [p5] "r"(p5), [cfg] "r"(cfg));
+}
+
+void pmp_allow_access(peri_addr_t* peri){
+	__attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
+	cfg = csr_read(CSR_PMPCFG0);
+	p2 = peri->reg_pa_start >> PMP_SHIFT;
+	p3 = (peri->reg_pa_start + peri->reg_size) >> PMP_SHIFT;
+	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+	sbi_printf("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
+
+	asm volatile(
+	     "csrw pmpaddr2, %[p2]\n\t"
+	     "csrw pmpaddr3, %[p3]\n\t"
+	     "csrw pmpcfg0, %[cfg]" ::[p2] "r"(p2), [p3] "r"(p3), [cfg] "r"(cfg));
+	flush_tlb();
 }
 
 void save_umode_context(enclave_context *context, struct sbi_trap_regs *regs)
@@ -305,7 +331,7 @@ void memcpy_from_user(uintptr_t uaddr, uintptr_t maddr, uintptr_t size,
 
 uintptr_t find_avail_enclave()
 {
-	for (size_t i = 0; i < NUM_ENCLAVE; ++i) {
+	for (size_t i = 1; i < NUM_ENCLAVE; ++i) {
 		if (enclaves[i].status == ENC_FREE)
 			return i;
 	}
@@ -365,10 +391,12 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	start_addr += base_size;
 	sbi_printf("%lx\n", start_addr);
 	sbi_printf("[create_enclave] driver_bitmask: 0x%lx\n", driver_bitmask);
-	if (driver_bitmask != 0)
-		drv_size = drvcpy(&start_addr, driver_bitmask);
-	else
+	if (driver_bitmask != 0) {
+		drv_size	      = drvcpy(&start_addr, driver_bitmask);
+		// context->peri_bitmask = driver_bitmask;s
+	} else {
 		start_addr = 0;
+	}
 	sbi_printf("[create_enclave] start_addr: %lx\n", start_addr);
 	sbi_printf("[create_enclave] base_start: %lx\n", base_start);
 	sbi_printf("[create_enclave] enclave pa = %lx\n", context->pa);
@@ -387,9 +415,10 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 {
 	uintptr_t id	      = args[0];
 	enclave_context *into = &enclaves[id], *from = &enclaves[NUM_ENCLAVE];
+	uint32_t hartid = sbi_current_hartid();
 
-
-	sbi_printf("[enter_enclave] log1\n");
+	sbi_printf("[enter_enclave] at hartid: %u\n", hartid);
+	enclave_on_core[hartid] = id;
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
 		return EBI_ERROR;
 
@@ -417,25 +446,30 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
 
 	regs->a0 = id;
-	regs->a1 = into->pa;
-	regs->a2 = into->enclave_binary_size;
-	regs->a3 = into->drv_list;
+	regs->a1 = id;
+	regs->a2 = into->pa;
+	regs->a3 = into->enclave_binary_size;
+	regs->a4 = into->drv_list;
 	into->status   = ENC_RUN;
 	from->status   = ENC_IDLE;
-	return regs->a0;
+	return id;
 }
 
 uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 {
 	uintptr_t id = regs->a0, retval = regs->a1;
+	uint32_t hartid = sbi_current_hartid();
 
 	enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
+	sbi_printf("into->mstatus: %lx",into->ns_mstatus);
 	if (from->status != ENC_RUN || into->status != ENC_IDLE)
 		return EBI_ERROR;
 
 	sbi_memset((void *)from->pa, 0, EMEM_SIZE);
 	enclave_mem_free(from);
 	// clean and switch pmp
+
+	enclave_on_core[hartid] = 0;
 	pmp_switch(NULL);
 	restore_umode_context(into, regs);
 	restore_csr_context(into, regs);
@@ -446,7 +480,23 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	into->status = ENC_RUN;
 	return EBI_OK;
 }
+
+void inform_peri(struct sbi_trap_regs *regs){
+	int hartid		 = sbi_current_hartid();
+	enclave_context *current_enclave = &enclaves[enclave_on_core[hartid]];
+	uintptr_t pa		 = regs->a0;
+	uintptr_t va		 = regs->a1;
+	uintptr_t sz		 = regs->a2;
+	current_enclave->peri_list[current_enclave->peri_cnt].reg_pa_start = pa;
+	current_enclave->peri_list[current_enclave->peri_cnt].reg_va_start = va;
+	current_enclave->peri_list[current_enclave->peri_cnt].reg_size = sz;
+	sbi_printf("\033[0;36mperiphare id %d, pa: 0x%lx, va: 0x%lx, sz: 0x%lx\n\033[0m",
+		   current_enclave->peri_cnt, pa, va, sz);
+	current_enclave->peri_cnt++;
+}
+
 // TODO: actually pause/resume can replace enter/exit
+// NOTE: remember to update the `enclave_on_core`
 /* pause an enclave, do not take care of ret */
 uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc)
 {
@@ -498,6 +548,7 @@ drv_addr_t bbl_addr_list[MAX_DRV] = {
     {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1}
 //     {(uintptr_t)&_drv_rtc_start, (uintptr_t)&_drv_rtc_end, -1}
 };
+
 
 // drv_addr_t bbl_addr_list[MAX_DRV] = {};
 

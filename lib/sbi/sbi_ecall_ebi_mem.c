@@ -123,23 +123,30 @@ void free_section_for_enclave(int eid)
 
 void section_ownership_dump()
 {
-	int i;
+	int i, j;
 	struct section *sec;
+	const int line_len = 8;
 
 	sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
-	for_each_section_in_pool(memory_pool, sec, i) {
-		sbi_printf("0x%lx\t", sec->sfn);
+	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+		for (i = 0, sec = &memory_pool[i+j];
+				i < line_len;
+				i++, sec = &memory_pool[i+j])
+			sbi_printf("0x%lx\t", sec->sfn);
+
+		sbi_printf("\n");
+		for (i = 0, sec = &memory_pool[i+j];
+				i < line_len;
+				i++, sec = &memory_pool[i+j]) {
+			if (sec->owner < 0)
+				sbi_printf("x\t");
+			else
+				sbi_printf("%d\t", sec->owner);
+		}
+		sbi_printf("\n");
+		
 	}
-	sbi_printf("\n");
-	for_each_section_in_pool(memory_pool, sec, i) {
-		// sbi_printf("section 0x%lx is owned by %d\n",
-				// sec->sfn, sec->owner);
-		if (sec->owner < 0)
-			sbi_printf("x\t");
-		else
-			sbi_printf("%d\t", sec->owner);
-	}
-	sbi_printf("\n");
+
 	sbi_printf("[M mode section_ownership_dump end]---------------------------\n");
 }
 

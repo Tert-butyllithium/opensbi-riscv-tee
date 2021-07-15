@@ -134,60 +134,40 @@ void enclave_mem_init()
 	}
 }
 
-uintptr_t enclave_mem_alloc(enclave_context *context, size_t enclave_size)
+// Allocate initial memory for enclave
+// @param:
+// context: enclave context
+// enclave_size: currently we only support initial mem less than a section.
+//		 more memory case should be supported later
+uintptr_t enclave_initial_mem_alloc(enclave_context *context, size_t enclave_size)
 {
-	enclave_page_t page;
-	assert((enclave_size & MASK(EPAGE_SHIFT)) ==
-	       0); // at least one page should be allocated
-	size_t page_num = enclave_size >> EPAGE_SHIFT;
-	/* Look for available memory */
-	char ok		= 0;
-	size_t page_idx = 0;
-	for (size_t i = 0; i < max_pages; i++) {
-		page = pages[i];
-		if (page.status == PAGE_FREE) {
-			ok = 1;
-			for (size_t j = i + 1;
-			     j - i < page_num && j < max_pages; j++) {
-				page = pages[j];
-				if (page.status != PAGE_FREE) {
-					i  = j + 1;
-					ok = 0;
-					break;
-				}
-			}
-			if (ok) {
-				page_idx = i;
-				break;
-			}
-		}
-	}
-	if (!ok) {
-		sbi_printf("alloc enclave memory failed\n");
-		return EBI_ERROR;
-	}
-	/* Mark used pages */
-	for (size_t i = 0; i < page_num; i++) {
-		pages[page_idx + i].status = PAGE_USED;
-		sbi_memset((void *)pages[page_idx + i].pa, 0, EPAGE_SIZE);
+	int eid;
+	uintptr_t pa;
+
+	if (enclave_size >= SECTION_SIZE) {
+		sbi_printf("[enclave_initial_mem_alloc] allocation failed"
+				"Currently only initial mem less than 0x%lx"
+				"is supported\n",
+				SECTION_SIZE);
+		return 0;
 	}
 
-	page	    = pages[page_idx];
-	context->pa = page.pa;
-	sbi_printf("[enclave_mem_alloc] context->pa = %lx\n", context->pa);
+	eid = context->id;
+	pa = alloc_section_for_enclave(eid);
+
+	context->pa = pa;
+	sbi_printf("[enclave_initial_mem_alloc] context->pa = %lx\n", context->pa);
 	context->mem_size = enclave_size;
 	return EBI_OK;
 }
 
 uintptr_t enclave_mem_free(enclave_context *context)
 {
-	assert(context->mem_size % EPAGE_SIZE == 0);
-	size_t page_nums = context->mem_size >> EPAGE_SHIFT;
+	int eid = context->id;
 
-	uintptr_t start_page_index = (context->pa - pages[0].pa) >> EPAGE_SHIFT;
-	while (page_nums-- > 0) {
-		pages[start_page_index++].status = PAGE_FREE;
-	}
+	sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
+	free_section_for_enclave(eid);
+
 	return EBI_OK;
 }
 
@@ -317,7 +297,7 @@ void memcpy_from_user(uintptr_t uaddr, uintptr_t maddr, uintptr_t size,
 
 uintptr_t find_avail_enclave()
 {
-	for (size_t i = 0; i < NUM_ENCLAVE; ++i) {
+	for (size_t i = 1; i <= NUM_ENCLAVE; ++i) {
 		if (enclaves[i].status == ENC_FREE)
 			return i;
 	}
@@ -326,11 +306,11 @@ uintptr_t find_avail_enclave()
 
 void init_enclaves(void)
 {
-	enclave_mem_init();
+	// enclave_mem_init();
 	init_memory_pool();
-	sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
-	enclaves[NUM_ENCLAVE].status = ENC_RUN;
-	for (size_t i = 0; i < NUM_ENCLAVE; ++i)
+	// sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
+	enclaves[0].status = ENC_RUN;
+	for (size_t i = 1; i <= NUM_ENCLAVE; ++i)
 		enclaves[i].status = ENC_FREE;
 	sbi_printf("[EBI] enclaves init successfully!");
 }
@@ -356,11 +336,13 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	if (avail_id == EBI_ERROR)
 		return EBI_ERROR;
 	/* LOADED enclave, loaded not running */
-	enclaves[avail_id].status = ENC_LOAD;
 	context			  = &enclaves[avail_id];
+	context->status = ENC_LOAD;
+	context->id = avail_id;
+	
 	sbi_printf("[create_enclave] log2\n");
 
-	if (EBI_OK != enclave_mem_alloc(context, EMEM_SIZE))
+	if (EBI_OK != enclave_initial_mem_alloc(context, EMEM_SIZE))
 		return EBI_ERROR;
 	sbi_printf("[create_enclave] log3\n");
 
@@ -400,9 +382,9 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 {
 	uintptr_t id	      = args[0];
-	enclave_context *into = &enclaves[id], *from = &enclaves[NUM_ENCLAVE];
+	enclave_context *into = &enclaves[id], *from = &enclaves[0];
 
-	sbi_printf("[enter_enclave] log1\n");
+	sbi_printf("[enter_enclave] enclave id = %lx\n", id);
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
 		return EBI_ERROR;
 
@@ -439,11 +421,13 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 {
 	uintptr_t id = regs->a0, retval = regs->a1;
 
-	enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
+	sbi_printf("[exit_enclave] exit enclave %lx\n", id);
+
+	enclave_context *from = &(enclaves[id]), *into = &enclaves[0];
 	if (from->status != ENC_RUN || into->status != ENC_IDLE)
 		return EBI_ERROR;
 
-	sbi_memset((void *)from->pa, 0, EMEM_SIZE);
+	// sbi_memset((void *)from->pa, 0, EMEM_SIZE);
 	enclave_mem_free(from);
 	// clean and switch pmp
 	pmp_switch(NULL);

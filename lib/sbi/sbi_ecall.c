@@ -145,7 +145,8 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		 * case should be handled differently.
 		 */
 		regs->mepc += 4;
-		regs->a0 = ret;
+		if (!(extension_id == SBI_EXT_EBI && func_id == SBI_EXT_EBI_ENTER))
+			regs->a0 = ret;
 		if (!is_0_1_spec && extension_id != SBI_EXT_EBI)
 			regs->a1 = out_val;
 	}

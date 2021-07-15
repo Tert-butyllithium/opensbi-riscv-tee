@@ -14,7 +14,7 @@ extern char _enclave_start, _enclave_end;
 static int hartid_to_eid(int hartid)
 {
     // to be done
-    return 0;
+    return 1;
 }
 
 static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
@@ -48,19 +48,24 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[sbi_ecall_ebi_handler] enter\n");
         enter_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] back from enter_enclave\n");
-        sbi_printf("[sbi_ecall_ebi_handler] into->pa: 0x%lx\n", regs->a1);
+        sbi_printf("[sbi_ecall_ebi_handler] id = %lx, into->pa: 0x%lx\n", regs->a0, regs->a1);
         return ret;
 
     case SBI_EXT_EBI_EXIT:
-        sbi_printf("[sbi_ecall_ebi_handler] exit\n");
+        sbi_printf("[M mode sbi_ecall_ebi_handler] enclave %lx exit\n", regs->a0);
         exit_enclave(regs);
 	    return ret;
 
     case SBI_EXT_EBI_MEM_ALLOC:
-        sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
+        sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
         int eid = hartid_to_eid(core);
-        uintptr_t pa = alloc_mem_for_enclave(eid); // pa should be passed to enclave by regs
-        regs->a1 = pa;
+        uintptr_t pa = alloc_section_for_enclave(eid); // pa should be passed to enclave by regs
+        if (pa)
+            regs->a1 = pa;
+        else {
+            sbi_printf("[M mode SBI_EXT_EBI_MEM_ALLOC] allocation failed\n");
+            exit_enclave(regs);
+        }
         return ret;
     }
 

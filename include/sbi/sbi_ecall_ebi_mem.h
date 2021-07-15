@@ -9,8 +9,8 @@
 #define SECTION_DOWN(addr) ((addr) & (~((SECTION_SIZE)-1)))
 
 // make sure these addresses are section aligned
-#define	MEMORY_POOL_START 0x88000000
-#define MEMORY_POOL_END	  0xa0000000
+#define	MEMORY_POOL_START 0x48000000
+#define MEMORY_POOL_END	  0x70000000
 #define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
 				>> SECTION_SHIFT)
 

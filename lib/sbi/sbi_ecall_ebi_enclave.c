@@ -356,7 +356,7 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	context->status = ENC_LOAD;
 	context->id = avail_id;
 	
-	sbi_printf("[create_enclave] log2\n");
+	sbi_printf("[create_enclave] log2: enclave id: %lx\n", context->id);
 
 	if (EBI_OK != enclave_initial_mem_alloc(context, EMEM_SIZE))
 		return EBI_ERROR;
@@ -400,6 +400,7 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 {
 	uintptr_t id	      = args[0];
 	enclave_context *into = &enclaves[id], *from = &enclaves[0];
+	uint32_t hartid = sbi_current_hartid();
 
 	sbi_printf("[enter_enclave] enclave id = %lx\n", id);
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
@@ -417,6 +418,8 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 	save_csr_context(from, mepc, regs);
 	restore_csr_context(into, regs);
 	flush_tlb();
+
+	enclave_on_core[hartid] = id;
 
 	/* User parameter */
 	/* argc and argv */

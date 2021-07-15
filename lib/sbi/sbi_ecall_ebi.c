@@ -13,8 +13,7 @@ extern char _enclave_start, _enclave_end;
 
 static int hartid_to_eid(int hartid)
 {
-    // to be done
-    return 1;
+    return enclave_on_core[hartid];
 }
 
 static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
@@ -53,6 +52,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
     
     case SBI_EXT_EBI_PERI_INFORM:
         inform_peri(regs);
+        return ret;
 
     case SBI_EXT_EBI_MEM_ALLOC:
         sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");

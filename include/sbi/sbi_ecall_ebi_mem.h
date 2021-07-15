@@ -2,12 +2,15 @@
 
 #include <stdint.h>
 
-#define SECTION_SHIFT	  26
-#define SECTION_SIZE	  (1UL << SECTION_SHIFT)  // 0x800_0000
+#define SECTION_SHIFT	  25
+#define SECTION_SIZE	  (1UL << SECTION_SHIFT)
+
+#define SECTION_UP(addr) (ROUND_UP(addr, SECTION_SIZE))
+#define SECTION_DOWN(addr) ((addr) & (~((SECTION_SIZE)-1)))
 
 // make sure these addresses are section aligned
-#define	MEMORY_POOL_START 0x48000000
-#define MEMORY_POOL_END	  0x70000000
+#define	MEMORY_POOL_START 0x88000000
+#define MEMORY_POOL_END	  0xa0000000
 #define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
 				>> SECTION_SHIFT)
 
@@ -18,6 +21,7 @@ struct section {
 
 extern struct section memory_pool[MEMORY_POOL_SECTION_NUM];
 
-uintptr_t alloc_mem_for_enclave(int eid);
+uintptr_t alloc_section_for_enclave(int eid);
 void init_memory_pool();
-void free_section(uintptr_t sfn);
+void free_section_for_enclave(int eid);
+void section_ownership_dump();

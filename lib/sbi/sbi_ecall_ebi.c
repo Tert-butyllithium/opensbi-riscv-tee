@@ -23,7 +23,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 struct sbi_trap_info *out_trap)
 {
 	int ret		    = 0;
-    unsigned long core = csr_read(mhartid); // TODO(haonan): needs to verify this value is the core id;
+    unsigned long core = csr_read(mhartid);
     ulong mepc = csr_read(CSR_MEPC);
 
     struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
@@ -61,6 +61,9 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
             sbi_printf("[M mode SBI_EXT_EBI_MEM_ALLOC] allocation failed\n");
             exit_enclave(regs);
         }
+    
+    case SBI_EXT_EBI_PERI_INFORM:
+        inform_peri(regs);
         return ret;
     }
 

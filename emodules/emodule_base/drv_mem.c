@@ -17,7 +17,7 @@ uintptr_t pt_root;
 /* Initialize memory for driver, including stack, heap, page table */
 void init_mem(uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
 {
-    printd("[init_mem] %s %x\n", argv, argc);
+    // printd("[init_mem] %s %x\n", argv, argc);
     printd("[init_mem] id = %d\n", id);
     printd("[init_mem] mem_start = 0x%lx\n", mem_start);
     enclave_id = id;

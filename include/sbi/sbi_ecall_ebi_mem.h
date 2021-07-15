@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define SECTION_SHIFT	  25
+#define SECTION_SHIFT	  23
 #define SECTION_SIZE	  (1UL << SECTION_SHIFT)
 
 #define SECTION_UP(addr) (ROUND_UP(addr, SECTION_SIZE))

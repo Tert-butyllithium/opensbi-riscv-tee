@@ -144,11 +144,11 @@ uintptr_t enclave_initial_mem_alloc(enclave_context *context, size_t enclave_siz
 	int eid;
 	uintptr_t pa;
 
-	if (enclave_size >= SECTION_SIZE) {
-		sbi_printf("[enclave_initial_mem_alloc] allocation failed"
-				"Currently only initial mem less than 0x%lx"
-				"is supported\n",
-				SECTION_SIZE);
+	if (enclave_size > SECTION_SIZE) {
+		sbi_printf("[enclave_initial_mem_alloc] allocation failed: "
+				"Currently only initial mem less than 0x%lx "
+				"is supported. 0x%lx requested\n",
+				SECTION_SIZE, enclave_size);
 		return 0;
 	}
 

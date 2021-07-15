@@ -37,7 +37,7 @@ int ebi_brk(uintptr_t addr)
 		return prog_brk;
 	if (addr > PAGE_UP(prog_brk)) {
 		uintptr_t n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
-		uintptr_t pa	  = alloc_page((pte *)pt_root, PAGE_DOWN(addr),
+		uintptr_t pa	  = alloc_page((pte *)pt_root, PAGE_UP(prog_brk),
 					       n_pages, PTE_U | PTE_R | PTE_W, USR);
 	}
 	prog_brk = addr;

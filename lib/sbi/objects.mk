@@ -22,6 +22,7 @@ libsbi-objs-y += sbi_ecall_ebi.o
 libsbi-objs-y += sbi_ecall_debug.o
 libsbi-objs-y += sbi_ecall_ebi_enclave.o
 libsbi-objs-y += sbi_ecall_ebi_mem.o
+libsbi-objs-y += sbi_ecall_ebi_dma.o
 libsbi-objs-y += sbi_emulate_csr.o
 libsbi-objs-y += sbi_fifo.o
 libsbi-objs-y += sbi_hfence.o

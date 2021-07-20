@@ -25,6 +25,21 @@ uintptr_t drv_start_va;
 		      : "memory");				\
 })
 
+
+static uintptr_t alloc_mem_from_m()
+{
+    uintptr_t mem_alloc_ret, size;
+    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
+    asm volatile ("mv %0, a2":"=r"(size));
+    printd("[S mode alloc_mem_from_m] mem alloc result: allocated section pa: 0x%lx, size: 0x%lx\n",
+                mem_alloc_ret, size);
+    
+    // uintptr_t *ptr = (uintptr_t *)mem_alloc_ret;
+    // *ptr = 0x11223344;
+    // printd("[S mode alloc_mem_from_m] test access: 0x%lx\n", *ptr);
+}
+
 /* Initialize memory for driver, including stack, heap, page table */
 void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
 {
@@ -34,6 +49,11 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     enclave_id = id;
     // printd("mem start: 0x%x\n enclave id: 0x%x\n usr size: 0x%x\n", mem_start,
     // id, usr_size);
+
+
+    SBI_CALL(0xdeadbeef, 0, 0, 0); // ebi debug
+
+
     /* Give all spare memory to stack allocator, one for drivers, one for user
    * payload */
     extern char _start, _end;
@@ -206,15 +226,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 
     printd("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
-    uintptr_t mem_alloc_ret;
-    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
-    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
-    printd("[init_mem] mem alloc result: allocated section pa: 0x%lx\n",
-                mem_alloc_ret);
-    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
-    asm volatile ("mv %0, a1":"=r"(mem_alloc_ret));
-    printd("[init_mem] mem alloc result: allocated section pa: 0x%lx\n",
-                mem_alloc_ret);
+    alloc_mem_from_m();
 
     // map_page(NULL, 0xd0000000, 0x10000000, 1, 0);
 

@@ -82,7 +82,7 @@ static void __noreturn sbi_trap_error(const char *msg, int rc, u32 hartid,
 peri_addr_t* pmp_exception_handle(uintptr_t addr, uint32_t hartid){
 	int i = 0;
 	enclave_context* context = &enclaves[enclave_on_core[hartid]];
-	sbi_printf("[pmp_exception_handle] context id: %ld, peri_cnt: %d \n", context->id, context->peri_cnt);
+	sbi_printf("[pmp_exception_handle] context id: %lx, peri_cnt: %d \n", context->id, context->peri_cnt);
 	for(; i < context->peri_cnt; i++){
 		sbi_printf("[pmp_exception_handle] %lx~%lx\n",context->peri_list[i].reg_va_start, context->peri_list[i].reg_va_start + context->peri_list[i].reg_size);
 		if(addr >= context->peri_list[i].reg_va_start && addr < context->peri_list[i].reg_va_start + context->peri_list[i].reg_size){
@@ -325,7 +325,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 			pmp_allow_access(pmp_test);
 			regs->mepc = csr_read(CSR_MEPC);
 			// regs->mstatus &= ~ (3 << MSTATUS_MPP_SHIFT);
-			// break;
+			break;
 		}
 		msg = "page/access fault handler failed";
 		sbi_printf("%s at 0x%lx, sepc=0x%lx\n",msg, csr_read(CSR_STVAL), csr_read(CSR_SEPC));

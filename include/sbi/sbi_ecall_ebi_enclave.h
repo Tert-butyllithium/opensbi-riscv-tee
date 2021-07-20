@@ -153,6 +153,14 @@ typedef struct
 } peri_addr_t;
 
 typedef struct {
+  uintptr_t pmp_start;
+  uintptr_t pmp_size;
+  uintptr_t used;
+} pmp_region;
+
+#define PMP_REGION_MAX 4
+
+typedef struct {
     uintptr_t id;
 
     uintptr_t ns_satp;
@@ -174,8 +182,11 @@ typedef struct {
     peri_addr_t peri_list[PERI_NUM_MAX];
     uint8_t peri_cnt;
     char status;
+
+    pmp_region pmp_reg[PMP_REGION_MAX];
 } enclave_context;
 void pmp_switch(enclave_context *context);
+void pmp_update(enclave_context *context);
 extern uintptr_t create_enclave(uintptr_t* args, uintptr_t mepc);
 extern uintptr_t enter_enclave(uintptr_t* args, uintptr_t mepc);
 extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
@@ -232,6 +243,7 @@ char drvfetch(int drv_id, int enclave_id);
 void drvrelease(int drv_id, int enclave_id);
 void inform_peri(struct sbi_trap_regs *regs);
 void pmp_allow_access(peri_addr_t* peri);
+void pmp_allow_region(uintptr_t pa, uintptr_t size);
 
 // Currently, interrupts are always disabled in M-mode.
 #define disable_irqsave() (0)

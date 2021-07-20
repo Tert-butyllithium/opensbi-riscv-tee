@@ -20,16 +20,30 @@ struct section memory_pool[MEMORY_POOL_SECTION_NUM];
 
 
 static struct section *find_avail_section(void);
-static void withdraw_pmp(struct section *sec);
+static void pmp_allow(struct section *sec);
 static void free_section(uintptr_t sfn);
 static void set_section_zero(uintptr_t sfn);
+
+
+// to do:
+// 1. pmp configuration should be encoded into enclave context so that pmp 
+// can be configured correctly during context switches.
+// 
+// 2. seperate inital memory allocation from OOM memory allocation:
+// initial memory is allocated during creation but should be protected on entering
+// other allocated memory should be protected right after allocation.
+
+
+
 
 // eid: enclave id
 // return: start physical address of the allocated section if success,
 //	   zero otherwise
-uintptr_t alloc_section_for_enclave(int eid)
+// this function should be followed by pmp_update
+uintptr_t alloc_section_for_enclave(enclave_context *context)
 {
 	struct section *sec;
+	uintptr_t eid = context->id;
 
 	section_ownership_dump();
 
@@ -39,13 +53,22 @@ uintptr_t alloc_section_for_enclave(int eid)
 		return 0;
 	}
 	
-	sbi_printf("[alloc_section_for_enclave] section 0x%lx allocated for enclave %d\n",
+	sbi_printf("[alloc_section_for_enclave] section 0x%lx allocated for enclave %lx\n",
 			sec->sfn, eid);
 	set_section_zero(sec->sfn);
 	sec->owner = eid;
 
 	section_ownership_dump();
 	
+	for (int i = PMP_REGION_MAX - 1; i >= 0; i--) {
+		if (context->pmp_reg[i].used)
+			continue;
+		context->pmp_reg[i].pmp_start = (sec->sfn << SECTION_SHIFT);
+		context->pmp_reg[i].pmp_size = SECTION_SIZE;
+		context->pmp_reg[i].used = 1;
+		break;
+	}
+
 	return (sec->sfn) << SECTION_SHIFT;
 }
 
@@ -80,9 +103,14 @@ static struct section *find_avail_section()
 	return NULL;
 }
 
-static void withdraw_pmp(struct section *sec)
+__unused static void pmp_allow(struct section *sec)
 {
-	// to be done
+	pmp_allow_region(sec->sfn << SECTION_SHIFT, SECTION_SIZE);
+	return;
+}
+
+static void pmp_withdraw(struct section *sec)
+{
 	return;
 }
 
@@ -99,7 +127,7 @@ static void free_section(uintptr_t sfn)
 	set_section_zero(sfn);
 
 	// configure pmp. previous owner may no longer access it.
-	withdraw_pmp(sec);
+	pmp_withdraw(sec);
 
 	sec->owner = -1;
 
@@ -125,23 +153,25 @@ void section_ownership_dump()
 {
 	int i, j;
 	struct section *sec;
-	const int line_len = 8;
+	const int line_len = 32;
 
 	sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
 	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
-		for (i = 0, sec = &memory_pool[i+j];
-				i < line_len;
-				i++, sec = &memory_pool[i+j])
-			sbi_printf("0x%lx\t", sec->sfn);
+		// for (i = 0, sec = &memory_pool[i+j];
+		// 		i < line_len;
+		// 		i++, sec = &memory_pool[i+j])
+		// 	sbi_printf("0x%lx\t", sec->sfn);
 
-		sbi_printf("\n");
+		// sbi_printf("\n");
 		for (i = 0, sec = &memory_pool[i+j];
-				i < line_len;
+				i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
 				i++, sec = &memory_pool[i+j]) {
 			if (sec->owner < 0)
-				sbi_printf("x\t");
+				sbi_printf("x");
+				// sbi_printf("x\t");
 			else
-				sbi_printf("%d\t", sec->owner);
+				sbi_printf("%d", sec->owner);
+				// sbi_printf("%d\t", sec->owner);
 		}
 		sbi_printf("\n");
 		

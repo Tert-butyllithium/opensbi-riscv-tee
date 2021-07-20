@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 
 #define SECTION_SHIFT	  23
 #define SECTION_SIZE	  (1UL << SECTION_SHIFT)
@@ -21,7 +22,7 @@ struct section {
 
 extern struct section memory_pool[MEMORY_POOL_SECTION_NUM];
 
-uintptr_t alloc_section_for_enclave(int eid);
+uintptr_t alloc_section_for_enclave(enclave_context *context);
 void init_memory_pool();
 void free_section_for_enclave(int eid);
 void section_ownership_dump();

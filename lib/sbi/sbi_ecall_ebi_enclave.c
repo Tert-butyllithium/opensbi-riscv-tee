@@ -7,9 +7,9 @@
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_ecall_ebi_mem.h>
 
-#define MAX_PAGE 8192
-static enclave_page_t pages[MAX_PAGE];
-static size_t max_pages;
+// #define MAX_PAGE 8192
+// static enclave_page_t pages[MAX_PAGE];
+// static size_t max_pages;
 
 
 
@@ -110,22 +110,49 @@ static inline void store_uint64_t(uint64_t *addr, uint64_t val, uintptr_t mepc)
 	store_uint32_t((uint32_t *)addr + 1, val >> 32, mepc);
 }
 
-void enclave_mem_init()
+void pmp_update(enclave_context *context)
 {
-	uintptr_t page_start, page_end;
-	page_start		   = (uintptr_t)&_enclave_start;
-	page_end		   = (uintptr_t)&_enclave_end;
-	size_t enclave_memory_size = page_end - page_start;
-	assert(enclave_memory_size % EPAGE_SIZE == 0);
-	max_pages = enclave_memory_size / EPAGE_SIZE;
+	// if (!context) 
+	// 	return;
 
-	assert(max_pages <=
-	       MAX_PAGE); // ensure we can keep track of all memory.
-	sbi_memset(pages, 0, sizeof(enclave_page_t) * max_pages);
-	for (size_t i = 0; i < max_pages; i++) {
-		pages[i].pa	= page_start + i * EPAGE_SIZE;
-		pages[i].status = PAGE_FREE;
-	}
+	// uintptr_t p0 = context->pmp_reg[0].pmp_start >> PMP_SHIFT,
+	// 	  p1 = context->pmp_reg[0].pmp_size >> PMP_SHIFT,
+	// 	  p2 = context->pmp_reg[1].pmp_start >> PMP_SHIFT,
+	// 	  p3 = context->pmp_reg[1].pmp_size >> PMP_SHIFT,
+	// 	  p4 = context->pmp_reg[2].pmp_start >> PMP_SHIFT,
+	// 	  p5 = context->pmp_reg[2].pmp_size >> PMP_SHIFT,
+	// 	  p6 = context->pmp_reg[3].pmp_start >> PMP_SHIFT,
+	// 	  p7 = context->pmp_reg[3].pmp_size >> PMP_SHIFT,
+	// 	  cfg = 0;
+
+	// for (int i = 0; i < PMP_REGION_MAX; i++) {
+	// 	if (context->pmp_reg[i].used) {
+	// 		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X)
+	// 			<< (8 + 16 * i);
+	// 		sbi_printf("[m mode pmp_update] PMP%d used: "
+	// 				"start: 0x%lx, size: 0x%lx, "
+	// 				"cfg: 0x%lx\n",
+	// 				i, context->pmp_reg[i].pmp_start,
+	// 				context->pmp_reg[i].pmp_size, cfg);
+	// 	}
+	// }
+
+	// pmp off
+	uintptr_t p0, p1, p2, p3, p4, p5, p6, p7, cfg;
+	p0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = cfg = 0;
+
+	asm volatile("csrw pmpaddr0, %[p0]\n\t"
+		     "csrw pmpaddr1, %[p1]\n\t"
+		     "csrw pmpaddr2, %[p2]\n\t"
+		     "csrw pmpaddr3, %[p3]\n\t"
+		     "csrw pmpaddr4, %[p4]\n\t"
+		     "csrw pmpaddr5, %[p5]\n\t"
+		     "csrw pmpaddr6, %[p6]\n\t"
+		     "csrw pmpaddr7, %[p7]\n\t"
+		     "csrw pmpcfg0, %[cfg]" ::
+		     [p0] "r"(p0), [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3),
+		     [p4] "r"(p4), [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7),
+		     [cfg] "r"(cfg));
 }
 
 // Allocate initial memory for enclave
@@ -135,7 +162,6 @@ void enclave_mem_init()
 //		 more memory case should be supported later
 uintptr_t enclave_initial_mem_alloc(enclave_context *context, size_t enclave_size)
 {
-	int eid;
 	uintptr_t pa;
 
 	if (enclave_size > SECTION_SIZE) {
@@ -146,8 +172,7 @@ uintptr_t enclave_initial_mem_alloc(enclave_context *context, size_t enclave_siz
 		return 0;
 	}
 
-	eid = context->id;
-	pa = alloc_section_for_enclave(eid);
+	pa = alloc_section_for_enclave(context);
 
 	context->pa = pa;
 	sbi_printf("[enclave_initial_mem_alloc] context->pa = %lx\n", context->pa);
@@ -171,7 +196,7 @@ int enclave_on_core[NUM_CORES];
 void pmp_switch(enclave_context *context)
 {
 	sbi_printf("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
-	uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
+	uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0, cfg = 0;
 	if (context == NULL) {
 		// Switch to Linux
 		extern char _enclave_end;
@@ -184,31 +209,26 @@ void pmp_switch(enclave_context *context)
 
 	} else {
 		// Switch to some enclave
-		// p0  = context->pa >> PMP_SHIFT;
-		// p1  = (context->pa + context->mem_size) >> PMP_SHIFT;
-		// cfg = (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 8;
-		
-		// allow (p2~p3)
-		// p2  = 0UL >> PMP_SHIFT;
-		// p3  = PHY_MEM_START >> PMP_SHIFT;
-		// cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-
-		// allow (p4~p5)
-		// p4 = PHY_MEM_END >> PMP_SHIFT;
-		// p5 = -1UL >> PMP_SHIFT;
-		p4 = context->pa >> PMP_SHIFT;
-		p5 = (context->pa + context->mem_size) >> PMP_SHIFT;
-		cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
+		p6 = 0UL >> PMP_SHIFT;
+		p7 = -1UL >> PMP_SHIFT;
+		// p6 = context->pa >> PMP_SHIFT;
+		// p7 = (context->pa + context->mem_size) >> PMP_SHIFT;
+		cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
+		sbi_printf("[m mode pmp_switch] p6 = 0x%lx, p7 = 0x%lx, cfg = 0x%lx\n",
+			p6, p7, cfg);
 	}
+
 	asm volatile("csrw pmpaddr0, %[p0]\n\t"
 		     "csrw pmpaddr1, %[p1]\n\t"
 		     "csrw pmpaddr2, %[p2]\n\t"
 		     "csrw pmpaddr3, %[p3]\n\t"
 		     "csrw pmpaddr4, %[p4]\n\t"
 		     "csrw pmpaddr5, %[p5]\n\t"
+		     "csrw pmpaddr6, %[p6]\n\t"
+		     "csrw pmpaddr7, %[p7]\n\t"
 		     "csrw pmpcfg0, %[cfg]" ::[p0] "r"(p0),
 		     [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3), [p4] "r"(p4),
-		     [p5] "r"(p5), [cfg] "r"(cfg));
+		     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
 }
 
 void pmp_allow_access(peri_addr_t* peri){
@@ -223,6 +243,24 @@ void pmp_allow_access(peri_addr_t* peri){
 	     "csrw pmpaddr2, %[p2]\n\t"
 	     "csrw pmpaddr3, %[p3]\n\t"
 	     "csrw pmpcfg0, %[cfg]" ::[p2] "r"(p2), [p3] "r"(p3), [cfg] "r"(cfg));
+	flush_tlb();
+}
+
+void pmp_allow_region(uintptr_t pa, uintptr_t size)
+{
+	uintptr_t p4, p5, cfg;
+	cfg = csr_read(CSR_PMPCFG0);
+	p4 = pa >> PMP_SHIFT;
+	p5 = (pa + size) >> PMP_SHIFT;
+	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
+	sbi_printf("[pmp_allow_region] PMP 0x%lx ~ 0x%lx\n",
+			p4 << PMP_SHIFT,
+			p5 << PMP_SHIFT);
+
+	asm volatile(
+	     "csrw pmpaddr4, %[p4]\n\t"
+	     "csrw pmpaddr5, %[p5]\n\t"
+	     "csrw pmpcfg0, %[cfg]" ::[p4] "r"(p4), [p5] "r"(p5), [cfg] "r"(cfg));
 	flush_tlb();
 }
 

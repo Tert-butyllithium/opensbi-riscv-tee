@@ -42,7 +42,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[sbi_ecall_ebi_handler] enter\n");
         enter_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] back from enter_enclave\n");
-        sbi_printf("[sbi_ecall_ebi_handler] id = %lx, into->pa: 0x%lx\n", regs->a0, regs->a1);
+        sbi_printf("[sbi_ecall_ebi_handler] id = %lx, into->pa: 0x%lx\n", regs->a1, regs->a2);
         return ret;
 
     case SBI_EXT_EBI_EXIT:
@@ -57,9 +57,13 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
     case SBI_EXT_EBI_MEM_ALLOC:
         sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
         int eid = hartid_to_eid(core);
-        uintptr_t pa = alloc_section_for_enclave(eid); // pa should be passed to enclave by regs
-        if (pa)
+        enclave_context *context = &enclaves[eid];
+        uintptr_t pa = alloc_section_for_enclave(context); // pa should be passed to enclave by regs
+        if (pa) {
             regs->a1 = pa;
+            regs->a2 = SECTION_SIZE;
+            // pmp_update(context);
+        }
         else {
             sbi_printf("[M mode SBI_EXT_EBI_MEM_ALLOC] allocation failed\n");
             exit_enclave(regs);

@@ -28,7 +28,7 @@
 #include <sbi/sbi_string.h>
 #include <stddef.h>
 
-#define SUNXI_DMA_MAX 15
+#define SUNXI_DMA_MAX 16
 
 static int dma_int_cnt;
 static int dma_init = -1;
@@ -50,20 +50,91 @@ static void inline mem_dump(uint addr);
 
 
 /**
- * @brief copy memory using DMA (DRAM to DRAM)
+ * @brief copy memory using DMA (DRAM to DRAM), CPU hangs during copying
  * 
- * @param src_addr: source physical address 
- * @param dst_addr: destination physical address
+ * @param src_addr: source physical address (32-bit)
+ * @param dst_addr: destination physical address (32-bit)
  * @param count: number of bytes
  * @return int: 1 for success, 0 for fail
  */
-__attribute__((unused)) int dma_copy(ulong src_addr, ulong dst_addr, ulong len)
+int dma_copy(ulong src_addr, ulong dst_addr, ulong len)
 {
-	
+	struct sunxi_dma_source_t *dma_source;
+	sunxi_dma_set dma_set;
+	int status = 0;
+	ulong hdma;
+	uint channel_count;
+	uint src_addr_32 = (uint)src_addr, dst_addr_32 = (uint)dst_addr;
+	uint len_32 = (uint)len;
+
+	// settings
+	dma_set.loop_mode = 0;
+	dma_set.wait_cyc = 8;
+	dma_set.data_block_size = 1 * 32 / 8;
+
+	dma_set.channel_cfg.src_drq_type	= DMAC_CFG_TYPE_DRAM;
+	dma_set.channel_cfg.src_addr_mode	= DMAC_CFG_DEST_ADDR_TYPE_LINEAR_MODE;
+	dma_set.channel_cfg.src_burst_length	= DMAC_CFG_SRC_1_BURST;
+	dma_set.channel_cfg.src_data_width	= DMAC_CFG_SRC_DATA_WIDTH_32BIT;
+	dma_set.channel_cfg.reserved0		= 0;
+
+	dma_set.channel_cfg.dst_drq_type	= DMAC_CFG_TYPE_DRAM;
+	dma_set.channel_cfg.dst_addr_mode	= DMAC_CFG_DEST_ADDR_TYPE_LINEAR_MODE;
+	dma_set.channel_cfg.dst_burst_length	= DMAC_CFG_SRC_1_BURST;
+	dma_set.channel_cfg.dst_data_width	= DMAC_CFG_SRC_DATA_WIDTH_32BIT;
+	dma_set.channel_cfg.reserved1		= 0;
+
+	// init
+	sbi_printf("[m mode dma_copy] copy 0x%x to 0x%x, length: 0x%x\n",
+		src_addr_32, dst_addr_32, len_32);
+	sunxi_dma_init();
+
+	// request dma resource
+	hdma = sunxi_dma_request_from_last(0);
+	if (!hdma) {
+		sbi_printf("[m mode dma_copy] ERROR: no available dma channel\n");
+		return 0;
+	}
+	dma_source = (struct sunxi_dma_source_t *)hdma;
+	channel_count = dma_source->channel_count;
+	sbi_printf("[m mode dma_copy] using dma channel 0x%x\n",
+		channel_count);
+
+	// interrupt setting
+	sunxi_dma_install_int(hdma, dma_callback, NULL);
+	sunxi_dma_enable_int(hdma);
+	// set commit_para, config, link of the descriptor
+	sunxi_dma_setting(hdma, &dma_set);
+	// set source addr, dest addr, length; and launch dma operation
+	flush_dcache_range(dst_addr, dst_addr + len);
+	sunxi_dma_start(hdma, src_addr_32, dst_addr_32, len_32);
+
+	// waiting for dma completion
+	for (int i = 0;; i++) {
+		status = sunxi_dma_querystatus(hdma);
+		if (i % 100 == 0)
+			sbi_printf("[m mode dma_test] status: %u\n",
+				status);
+		if (!status)
+			break;
+	}
+	sbi_printf("[m mode dma_copy] dma done\n");
+
+	// invalidate cache
+	// flush cache will write cache contents into memory, 
+	// causing data inconsistance
+	invalidate_dcache_range(dst_addr, dst_addr + len);
+
+	// free dma source
+	sunxi_dma_release(hdma);
+	sunxi_dma_free_int(hdma);
+	sunxi_dma_disable_int(hdma);
+	sunxi_dma_exit();
+
 	return 1;
 }
 
-void dma_test()
+__attribute__((unused)) void dma_test()
 {
 	struct sunxi_dma_source_t *dma_source;
 	ulong hdma;

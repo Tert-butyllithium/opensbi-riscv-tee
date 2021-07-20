@@ -11,6 +11,18 @@
 extern char _base_start, _base_end;
 extern char _enclave_start, _enclave_end;
 
+static void inline mem_dump(uintptr_t addr, uintptr_t len)
+{
+	sbi_printf("[m mode mem_dump] start ----------------------");
+	unsigned char *ptr = (unsigned char *)addr;
+	for (int i = 0; i < len; i++) {
+		if (i % 8 == 0)
+			sbi_printf("\n0x%p:\t", ptr);
+		sbi_printf("0x%x\t", *ptr++);
+	}
+	sbi_printf("\n[m mode mem_dump] end ------------------------\n");
+}
+
 static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 				 unsigned long extid, unsigned long funcid,
 				 unsigned long *args, unsigned long *out_val,
@@ -23,7 +35,11 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 	// sbi_printf("[debug_handler] *arg0: 0x%lx\n", *(uintptr_t*)(args[0]));
 	// sbi_printf("[debug_handler] *arg1: 0x%lx\n", *(uintptr_t*)(args[1]));
 	// sbi_printf("[debug_handler] *arg2: 0x%lx\n", *(uintptr_t*)(args[2]));
-	dma_test();
+	mem_dump(0x48000000, 16);
+	mem_dump(0x50000000, 16);
+	dma_copy(0x48000000, 0x50000000, 4096);
+	mem_dump(0x50000000, 16);
+
 
 	sbi_printf("[debug_handler] ############## DEBUG END ###########\n");
     return 0;

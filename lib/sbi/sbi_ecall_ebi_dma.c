@@ -28,7 +28,7 @@
 #include <sbi/sbi_string.h>
 #include <stddef.h>
 
-#define SUNXI_DMA_MAX 4
+#define SUNXI_DMA_MAX 15
 
 static int dma_int_cnt;
 static int dma_init = -1;
@@ -48,6 +48,20 @@ static int sunxi_get_lw32_addr(void *addr);
 static void inline mem_dump(uint addr);
 
 
+
+/**
+ * @brief copy memory using DMA (DRAM to DRAM)
+ * 
+ * @param src_addr: source physical address 
+ * @param dst_addr: destination physical address
+ * @param count: number of bytes
+ * @return int: 1 for success, 0 for fail
+ */
+__attribute__((unused)) int dma_copy(ulong src_addr, ulong dst_addr, ulong len)
+{
+	
+	return 1;
+}
 
 void dma_test()
 {
@@ -87,7 +101,7 @@ void dma_test()
 	dma_set.channel_cfg.reserved1		= 0;
 
 	// flush data cache
-	flush_dcache_range(0x50000000, 0x60000000);	
+	flush_dcache_range(0x50000000UL, 0x60000000UL);	
 
 	// init
 	sbi_printf("[m mode dma_test]\n");
@@ -126,6 +140,13 @@ void dma_test()
 	// flush data cache
 	invalidate_dcache_range(0x50000000UL, 0x60000000UL);	
 
+	// free dma source
+	sunxi_dma_release(hdma);
+	sunxi_dma_free_int(hdma);
+	sunxi_dma_disable_int(hdma);
+	sunxi_dma_exit();
+
+
 	// check
 	mem_dump(dst_addr);
 
@@ -134,12 +155,6 @@ void dma_test()
 
 
 
-
-
-__attribute__((unused)) static inline void flush_dcache()
-{
-	asm volatile("dcache.call");
-}
 
 static void dma_callback(void *arg)
 {
@@ -154,6 +169,11 @@ static void inline mem_dump(uint addr)
 	for (int i = 0; i < 64; i++) {
 		sbi_printf("0x%x\n", *ptr++);
 	}
+}
+
+__attribute__((unused)) static inline void flush_dcache()
+{
+	asm volatile("dcache.call");
 }
 
 static void flush_dcache_range(unsigned long start, unsigned long end)

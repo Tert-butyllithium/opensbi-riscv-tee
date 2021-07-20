@@ -191,7 +191,7 @@ int sunxi_dma_free_int(ulong hdma);
 
 
 
-
+int dma_copy(ulong src_addr, ulong dst_addr, ulong len);
 void dma_test();
 
 

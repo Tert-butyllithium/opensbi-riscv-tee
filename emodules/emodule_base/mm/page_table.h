@@ -2,11 +2,9 @@
 
 #include "../drv_util.h"
 
-#define EDRV_PA_START    0x40000000
+// #define EDRV_PA_START    0x40000000
 #define EDRV_VA_START    0xC0000000
 #define EDRV_DRV_START   0xD0000000
-#define EDRV_VA_PA_OFFSET     (EDRV_VA_START - EDRV_PA_START)
-
 
 #define EPAGE_SIZE 4096
 #define EPAGE_SHIFT          12
@@ -23,6 +21,9 @@
 #define PAGE_DIR_POOL 64 
 
 #ifndef __ASSEMBLER__
+
+extern uintptr_t EDRV_PA_START;
+extern uintptr_t EDRV_VA_PA_OFFSET;
 
 typedef unsigned long size_t;
 

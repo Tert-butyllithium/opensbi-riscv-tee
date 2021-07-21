@@ -112,11 +112,12 @@ ret_to_usr:
     .section ".text.init"
     .globl  _start
 _start:
-    /* use a tmp handler to adjust pc */
     la      s7, 2f
-    li      s6, EDRV_VA_PA_OFFSET
-    add     s7, s7, s6
-    csrw    stvec,  s7
+    sub     s7, s7, a2      // s7 = 2f - mem_start (mem_start = a2)
+    li      s6, EDRV_VA_START
+    add     s7, s6, s7
+    csrw    stvec, s7
+
     /* temporary stack */
     la      sp, _temp_stack_end
     /* setup new page table */

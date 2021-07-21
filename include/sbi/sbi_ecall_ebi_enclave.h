@@ -131,10 +131,6 @@
 #define NUM_OF_PAGE(size)	\
         (((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))
 
-#define EDRV_PA_START    0x40000000
-#define EDRV_VA_START    0xC0000000
-#define EDRV_DRV_START   0xD0000000
-#define EDRV_VA_PA_OFFSET     (EDRV_VA_START - EDRV_PA_START)
 #define PERI_NUM_MAX 128
 
 #define EUSR_VA_START    0x0

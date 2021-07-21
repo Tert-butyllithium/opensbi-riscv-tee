@@ -4,6 +4,9 @@
 #include "page_table.h"
 #include "drv_page_pool.h"
 
+uintptr_t EDRV_PA_START;
+uintptr_t EDRV_VA_PA_OFFSET;
+
 #define PAGE_SIZE 4096
 #ifdef _DEBUG_LANRANLI
 #define printd printf

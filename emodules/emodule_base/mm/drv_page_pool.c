@@ -19,15 +19,15 @@ uintptr_t va_pa_offset() {
 void __spa_put(uintptr_t addr, struct pg_list* pool) {
     uintptr_t prev;
     uintptr_t offset = va_pa_offset();
-    addr = addr - offset;
+    addr = addr + offset;
     if(!LIST_EMPTY(pool)) {
-        prev = pool -> tail + offset;
+        prev = pool -> tail;
         NEXT_PAGE(prev) = addr;
     } else {
         pool->head = addr;
     }
 
-    NEXT_PAGE(addr + offset) = 0;
+    NEXT_PAGE(addr) = 0;
     pool->tail = addr;
     pool->count++;
 }
@@ -38,7 +38,7 @@ uintptr_t __spa_get(struct pg_list* pool) {
     if (LIST_EMPTY(pool)) {
         return -1;
     }
-    page = pool -> head + offset;
+    page = pool -> head;
     uintptr_t next = NEXT_PAGE(page);
     pool->head = next;
     pool->count--;
@@ -71,7 +71,7 @@ uintptr_t spa_get_zero(char id) {
 }
 
 uintptr_t spa_get_pa(char id) {
-    return __spa_get(page_pools + id) - va_pa_offset();
+    return __spa_get(page_pools + id);
 }
 
 uintptr_t spa_get_pa_zero(char id) {

@@ -34,7 +34,6 @@ void __spa_put(uintptr_t addr, struct pg_list* pool) {
 
 uintptr_t __spa_get(struct pg_list* pool) {
     uintptr_t page;
-    uintptr_t offset = va_pa_offset();
     if (LIST_EMPTY(pool)) {
         return -1;
     }
@@ -46,6 +45,7 @@ uintptr_t __spa_get(struct pg_list* pool) {
     return page;
 }
 
+// should be invoked before mmu gets turned on
 void spa_init(uintptr_t base, size_t size, char id) {
     uintptr_t cur;
     struct pg_list* pool = page_pools+id;

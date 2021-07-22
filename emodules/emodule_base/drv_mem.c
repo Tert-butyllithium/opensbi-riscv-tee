@@ -14,17 +14,11 @@ uintptr_t drv_start_va;
 
 #define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
 
-#define SBI_CALL(___which, ___arg0, ___arg1, ___arg2) ({			\
-	register uintptr_t a0 asm ("a0") = (uintptr_t)(___arg0);	\
-	register uintptr_t a1 asm ("a1") = (uintptr_t)(___arg1);	\
-	register uintptr_t a2 asm ("a2") = (uintptr_t)(___arg2);	\
-	register uintptr_t a7 asm ("a7") = (uintptr_t)(___which);	\
-	asm volatile ("ecall"					\
-		      : "+r" (a0)				\
-		      : "r" (a1), "r" (a2), "r" (a7)		\
-		      : "memory");				\
-})
 
+static inline void offset_register()
+{
+    SBI_CALL5(SBI_EXT_EBI, &EDRV_PA_START, &EDRV_VA_PA_OFFSET, &inv_map, EBI_OFFSET_REGISTER);
+}
 
 static uintptr_t alloc_mem_from_m()
 {
@@ -45,6 +39,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 {
     EDRV_PA_START = mem_start;
     EDRV_VA_PA_OFFSET = EDRV_VA_START - EDRV_PA_START;
+    offset_register(); // tell m mode where EDRV_VA_PA_OFFSET is
 
     printd("[s mode init_mem] id = %d\n", id);
     printd("[s mode init_mem] mem_start = 0x%lx\n", mem_start);

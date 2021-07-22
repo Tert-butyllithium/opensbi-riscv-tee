@@ -24,6 +24,8 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 	int ret		    = 0;
     unsigned long core = csr_read(mhartid);
     ulong mepc = csr_read(CSR_MEPC);
+    int eid = hartid_to_eid(core);
+    enclave_context *context = &enclaves[eid];
 
     struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
 
@@ -56,8 +58,6 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 
     case SBI_EXT_EBI_MEM_ALLOC:
         sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
-        int eid = hartid_to_eid(core);
-        enclave_context *context = &enclaves[eid];
         uintptr_t pa = alloc_section_for_enclave(context); // pa should be passed to enclave by regs
         if (pa) {
             regs->a1 = pa;
@@ -69,7 +69,21 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
             exit_enclave(regs);
         }
         return ret;
+
+    case SBI_EXT_EBI_OFFSET_REGISTER:
+        sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_OFFSET_REGISTER\n");
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&EDRV_PA_START = 0x%lx\n", regs->a0);
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&EDRV_VA_PA_OFFSET = 0x%lx\n", regs->a1);
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&inv_map = 0x%lx\n", regs->a2);
+        context->pa_start_addr= regs->a0;
+        context->va_pa_offset_addr = regs->a1;
+        context->inverse_map_addr = regs->a2;
+        return ret;
     }
+
 
 
     return ret;

@@ -179,8 +179,14 @@ typedef struct {
     uint8_t peri_cnt;
     char status;
 
+    uintptr_t pa_start_addr; // &EDRV_PA_START (phys addr)
+    uintptr_t va_pa_offset_addr; // &EDRV_VA_PA_OFFSET (phys addr)
+    uintptr_t inverse_map_addr; // &inv_map (phys addr)
+
     pmp_region pmp_reg[PMP_REGION_MAX];
 } enclave_context;
+
+
 void pmp_switch(enclave_context *context);
 void pmp_update(enclave_context *context);
 extern uintptr_t create_enclave(uintptr_t* args, uintptr_t mepc);

@@ -76,20 +76,28 @@ void init_other_driver() {
 		a0;                                                           \
 	})
 
+static inline void test(uintptr_t va)
+{
+	map_page(NULL, va, 0x48000000, 1, -1);
+	uintptr_t *ptr = (uintptr_t*)va;
+	uintptr_t content = *ptr;
+	printd("[S mode prepare_boot] memory dump of %p: 0x%lx\n",
+		ptr, content);
+}
+
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 	printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
 	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
 	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
-	// uintptr_t *ptr = (uintptr_t*)0xc0706410; // &drv_addr_list
-	// uintptr_t content = *ptr;
-	// printd("[prepare_boot] memory dump of %p: 0x%lx\n", ptr, content);
+	test(0x100000000); // error. independent of execution order
+	test(0xff110000); // works
+	// test(0xa0000000); error
+	test(0xd0000000); // error // works // depends on execution order
+	test(0xd0800000); // works // error 
 
-	// SBI_ECALL(0xdeadbeaf,0x40706410,0,0);
-	// printd("[prepare_boot] 0x%lx\n",*(unsigned long * )0x40706408);
 	init_other_driver();
 
-	// printd("[prepare_boot] 1\n");
 	/* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);
 	printd("[prepare_boot] sstatus = 0x%lx\n", sstatus);

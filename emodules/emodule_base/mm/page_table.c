@@ -144,6 +144,7 @@ uintptr_t get_pa(uintptr_t va)
 	uintptr_t tmp;
 	int i = 0;
 	while (1) {
+		printd("[S mode get_pa] i = %d, root = %p\n", i, root);
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			printd("ERROR: va:0x%lx is not valid!!!\n", va);

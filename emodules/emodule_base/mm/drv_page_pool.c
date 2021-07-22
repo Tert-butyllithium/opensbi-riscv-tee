@@ -16,28 +16,41 @@ uintptr_t va_pa_offset() {
     return 0;
 }
 
-void __spa_put(uintptr_t addr, struct pg_list* pool) {
+uintptr_t va_pa_offset_no_mmu() {
+    return EDRV_VA_PA_OFFSET - va_pa_offset();
+}
+
+// addr: pa
+void __spa_put(uintptr_t pa, struct pg_list* pool) {
     uintptr_t prev;
     uintptr_t offset = va_pa_offset();
-    addr = addr + offset;
+    uintptr_t va = pa + EDRV_VA_PA_OFFSET;
+    uintptr_t access_addr = pa + offset;
+
+    // printd("[S mode __spa_put] pa = 0x%lx, va = 0x%lx, \n"
+    //         "offset = 0x%lx, access_addr = 0x%lx\n",
+    //         pa, va, offset, access_addr);
+
     if(!LIST_EMPTY(pool)) {
-        prev = pool -> tail;
-        NEXT_PAGE(prev) = addr;
+        prev = pool -> tail - va_pa_offset_no_mmu();
+        NEXT_PAGE(prev) = va;
     } else {
-        pool->head = addr;
+        pool->head = va;
     }
 
-    NEXT_PAGE(addr) = 0;
-    pool->tail = addr;
+    NEXT_PAGE(access_addr) = 0;
+    pool->tail = va;
     pool->count++;
 }
 
 uintptr_t __spa_get(struct pg_list* pool) {
+    printd("[S mode __spa_get] pool = %p\n", pool);
     uintptr_t page;
     if (LIST_EMPTY(pool)) {
         return -1;
     }
-    page = pool -> head;
+    page = pool -> head - va_pa_offset_no_mmu();
+    printd("[S mode __spa_get] page = 0x%lx\n", page);
     uintptr_t next = NEXT_PAGE(page);
     pool->head = next;
     pool->count--;
@@ -76,6 +89,7 @@ uintptr_t spa_get_pa(char id) {
 
 uintptr_t spa_get_pa_zero(char id) {
     uintptr_t page = __spa_get(page_pools + id);
+    printd("[S mode spa_get_pa_zero] page = 0x%lx\n", page);
     my_memset((char*)page, 0, EPAGE_SIZE);
     return page - va_pa_offset();
 }

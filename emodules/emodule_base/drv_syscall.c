@@ -39,8 +39,11 @@ int ebi_brk(uintptr_t addr) {
     printd("####### brk start, prog_brk: 0x%x########\n",prog_brk);
     printd("addr: 0x%lx\n",addr);
     if (addr > PAGE_UP(prog_brk)) {
+	printd("ebi_brk cp 1\n");
         n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
+	printd("ebi_brk cp 2 n_pages = 0x%lx\n", n_pages);
         alloc_page((pte*)pt_root, PAGE_UP(prog_brk), n_pages, PTE_U | PTE_R | PTE_W, USR);
+	printd("ebi_brk cp 3\n");
     }
     prog_brk = addr;
     printd("####### brk end########\n");

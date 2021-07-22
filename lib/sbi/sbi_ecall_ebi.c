@@ -62,7 +62,6 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         if (pa) {
             regs->a1 = pa;
             regs->a2 = SECTION_SIZE;
-            // pmp_update(context);
         }
         else {
             sbi_printf("[M mode SBI_EXT_EBI_MEM_ALLOC] allocation failed\n");
@@ -78,6 +77,11 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
                     "&EDRV_VA_PA_OFFSET = 0x%lx\n", regs->a1);
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
                     "&inv_map = 0x%lx\n", regs->a2);
+        if (!(regs->a0 && regs->a1 && regs->a2)) {
+            sbi_printf("[M mode sbi_ecall_ebi_handler] invalid ecall, check input\n");
+            return ret;
+        }
+
         context->pa_start_addr= regs->a0;
         context->va_pa_offset_addr = regs->a1;
         context->inverse_map_addr = regs->a2;

@@ -7,6 +7,7 @@
 /* SPA alway return ACCESSABLE address instead of raw physical address!!!! */
 
 struct pg_list page_pools[NUM_POOL];
+static uintptr_t alloc_mem_from_m(struct pg_list* pool);
 
 uintptr_t va_pa_offset() {
     uintptr_t satp = read_csr(satp);
@@ -43,14 +44,18 @@ void __spa_put(uintptr_t pa, struct pg_list* pool) {
     pool->count++;
 }
 
+// returns virtual addr of the page, -1 on failure
 uintptr_t __spa_get(struct pg_list* pool) {
-    printd("[S mode __spa_get] pool = %p\n", pool);
-    uintptr_t page;
+    uintptr_t page, ret;
     if (LIST_EMPTY(pool)) {
-        return -1;
+        printd("[S mode __spa_get] pool tail = 0x%lx\n", pool->tail);
+        ret = alloc_mem_from_m(pool);
+        if (!ret) {
+            printd("[S mode __spa_get] alloc ERROR\n");
+            return -1;
+        }
     }
     page = pool -> head - va_pa_offset_no_mmu();
-    printd("[S mode __spa_get] page = 0x%lx\n", page);
     uintptr_t next = NEXT_PAGE(page);
     pool->head = next;
     pool->count--;
@@ -66,34 +71,72 @@ void spa_init(uintptr_t base, size_t size, char id) {
     for(cur = base; cur < base + size; cur += EPAGE_SIZE) {
         __spa_put(cur, pool);
     }
+    printd("[S mode spa_init] pool init size: 0x%x\n", pool->count);
 }
 void spa_put(uintptr_t addr, char id) {
     __spa_put(addr, page_pools + id);
 }
-uintptr_t spa_get(char id) {
-    return __spa_get(page_pools + id);
-}
-uintptr_t spa_get_zero(char id) {
-    uintptr_t page = __spa_get(page_pools + id);
-    if (page == -1 && id == DRV)
-        printd("OUT OF PAGE DRV\n");
-    else if (page == -1 && id == USR)
-        printd("OUT OF PAGE USR\n");
-    my_memset((char*)page, 0, EPAGE_SIZE);
-    return page;
-}
+// uintptr_t spa_get(char id) {
+    // uintptr_t page = __spa_get(page_pools + id);
+    // return page;
+// }
+// uintptr_t spa_get_zero(char id) {
+//     uintptr_t page = __spa_get(page_pools + id);
+//     my_memset((char*)page, 0, EPAGE_SIZE);
+//     return page;
+// }
 
 uintptr_t spa_get_pa(char id) {
-    return __spa_get(page_pools + id);
+    uintptr_t page = __spa_get(page_pools + id);
+    if (page == -1)
+        return -1;
+    return page - va_pa_offset();
 }
 
 uintptr_t spa_get_pa_zero(char id) {
     uintptr_t page = __spa_get(page_pools + id);
-    printd("[S mode spa_get_pa_zero] page = 0x%lx\n", page);
+    if (page == -1)
+        return -1;
     my_memset((char*)page, 0, EPAGE_SIZE);
     return page - va_pa_offset();
 }
 
 uintptr_t spa_avail(char id) {
     return (page_pools + id) -> count;
+}
+
+// alloc memory from memory manager
+// return the start physical address on success; 0 on failure
+static uintptr_t alloc_mem_from_m(struct pg_list* pool)
+{
+    uintptr_t addr, size;
+    unsigned int pool_size;
+    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(addr));
+    asm volatile ("mv %0, a2":"=r"(size));
+    printd("[S mode alloc_mem_from_m] mem alloc result: allocated section pa: 0x%lx, size: 0x%lx\n",
+                addr, size);
+
+    if (!addr) {
+        printd("[S mode alloc_mem_from_m] alloc ERROR\n");
+        return 0;
+    }
+
+
+    // linearly map the allocated memory by va_pa_offset
+    map_page(NULL, addr + EDRV_VA_PA_OFFSET, addr,
+                size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
+
+    // put the allocated memory into mem pool
+    for (uintptr_t page = addr; page < addr + size; page += EPAGE_SIZE) {
+        __spa_put(page, pool);
+    }
+
+    if (LIST_EMPTY(pool))
+        printd("[S mode alloc_mem_from_m] something went wrong\n");
+
+    pool_size = pool->count;
+    printd("[S mode alloc_mem_from_m] pool size is now: 0x%x\n", pool_size);
+
+    return addr;
 }

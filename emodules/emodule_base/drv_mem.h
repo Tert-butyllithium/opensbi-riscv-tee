@@ -11,7 +11,7 @@
 #define EUSR_MEM_SIZE	(EMEM_SIZE - EDRV_MEM_SIZE)
 #define EUSR_STACK_SIZE	0x4000
 #define EUSR_HEAP_STACK_RATIO 10
-#define INVERSE_MAP_ENTRY_NUM 32768
+#define INVERSE_MAP_ENTRY_NUM 1024
 
 #include "mm/page_table.h"
 #ifndef __ASSEMBLER__

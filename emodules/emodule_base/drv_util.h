@@ -36,4 +36,5 @@ void print(const char* s, ...);
 void putstring_console(const char *s);
 void *my_memset(void *s, int c, unsigned int n);
 void show_reg(uintptr_t *regs);
+void print_color(const char* s);
 #endif

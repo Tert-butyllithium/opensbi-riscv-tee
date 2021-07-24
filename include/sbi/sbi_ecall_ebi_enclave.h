@@ -208,7 +208,19 @@ extern char _enclave_start, _enclave_end;
 extern char _base_start, _base_end;
 
 
-typedef uintptr_t pte;
+typedef struct pte {
+    uint32_t pte_v: 1;
+    uint32_t pte_r: 1;
+    uint32_t pte_w: 1;
+    uint32_t pte_x: 1;
+    uint32_t pte_u: 1;
+    uint32_t pte_g: 1;
+    uint32_t pte_a: 1;
+    uint32_t pte_d: 1;
+    uint32_t rsw: 2;
+    uintptr_t ppn: 44;
+    uintptr_t __unused_value: 10;
+} pte;
 
 void enclave_mem_init(void);
 uintptr_t enclave_mem_alloc(enclave_context* context, size_t enclave_size);

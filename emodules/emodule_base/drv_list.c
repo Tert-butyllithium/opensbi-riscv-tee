@@ -3,17 +3,6 @@
 #include "mm/page_table.h"
 #include "../drv_console/drv_console.h"
 
-drv_ctrl_t* init_console_driver2()
-{
-    // map driver page
-
-
-    // map register
-
-    // init register
-
-    // test
-}
 
 drv_ctrl_t* init_console_driver() {
     uintptr_t drv_console_start, drv_console_end, console_drv_size, console_va;

@@ -13,6 +13,25 @@ drv_ctrl_t* peri_reg_list[MAX_DRV] = {0};
 drv_initer drv_init_list[MAX_DRV];
 drv_addr_t *drv_addr_list;
 
+#define L1_CACHE_BYTES 64
+static void flush_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
+	asm volatile(".long 0x01b0000b");		/*sync.is*/
+}
+
+static void invalidate_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile ("dcache.ipa a0");
+
+	asm volatile (".long 0x01b0000b");
+}
+
 uintptr_t init_usr_stack(uintptr_t usr_sp)
 {
 	PUSH(usr_sp, 0);
@@ -76,12 +95,17 @@ void init_other_driver() {
 		a0;                                                           \
 	})
 
-static inline void test(uintptr_t va)
+static void test(uintptr_t va)
 {
-	map_page(NULL, va, 0x48000000, 1, -1);
+	static uintptr_t pa = 0x48808000;
+	map_page(NULL, va, pa, 1, -1);
+	printd("[S mode test] log 1\n");
+	pa += EPAGE_SIZE;
+	printd("[S mode test] log 2\n");
+	SBI_CALL5(0xdeadbeef, va, read_csr(satp), 0, 0); // dump pte in m mode
 	uintptr_t *ptr = (uintptr_t*)va;
 	uintptr_t content = *ptr;
-	printd("[S mode prepare_boot] memory dump of %p: 0x%lx\n",
+	printd("[S mode test] memory dump of %p: 0x%lx\n",
 		ptr, content);
 }
 
@@ -90,11 +114,17 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
 	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
-	test(0x100000000); // error. independent of execution order
-	test(0xff110000); // works
-	// test(0xa0000000); error
-	test(0xd0000000); // error // works // depends on execution order
-	test(0xd0800000); // works // error 
+	print_color("[S mode prepare_boot] -----------------------------------");
+	uintptr_t *ptr = (uintptr_t *)0xc0611000;
+	SBI_CALL5(0xdeadbeef, 0x48611000, 0, 0, 0);
+	*ptr = 0x11223344;
+	printd("[S mode prepare_boot] %p: 0x%lx\n", ptr, *ptr);
+	flush_dcache_range(0x48611000, 0x48612000);
+	SBI_CALL5(0xdeadbeef, 0x48611000, 0, 0, 0);
+	// pte *tmp_pte = (pte *)0xc0611000;
+	// tmp_pte->ppn = 0x5000a;
+	// SBI_CALL5(0xdeadbeef, 0x48611000, 0, 0, 0);
+	print_color("[S mode prepare_boot] -----------------------------------");
 
 	init_other_driver();
 

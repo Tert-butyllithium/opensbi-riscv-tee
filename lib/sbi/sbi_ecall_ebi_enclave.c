@@ -369,6 +369,19 @@ void init_enclaves(void)
 	sbi_printf("[EBI] enclaves init successfully!");
 }
 
+static void disable_watchdog()
+{
+	uintptr_t base_addr = 0x2050000;
+	uint32_t *cfg = (uint32_t *)base_addr + 0xb4;
+	uint32_t *irq_ena = (uint32_t *)base_addr + 0xa0;
+
+	uint32_t origin_cfg = *cfg;
+	uint32_t updated_cfg = (origin_cfg & ~(0x3)) | 0b10;
+
+	*cfg = updated_cfg;
+	*irq_ena = 0;
+}
+
 uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 {
 	uintptr_t addr;
@@ -383,6 +396,7 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 		return EBI_ERROR;
 
 	sbi_printf("[create_enclave] log1\n");
+	disable_watchdog();
 
 	enclave_context *context = NULL;
 	uintptr_t avail_id	 = find_avail_enclave();
@@ -440,6 +454,7 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 	enclave_context *into = &enclaves[id], *from = &enclaves[0];
 	uint32_t hartid = sbi_current_hartid();
 
+	disable_watchdog();
 	sbi_printf("[enter_enclave] enclave id = %lx\n", id);
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
 		return EBI_ERROR;

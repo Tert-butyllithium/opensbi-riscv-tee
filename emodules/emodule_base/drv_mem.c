@@ -20,6 +20,24 @@ static inline void offset_register()
     SBI_CALL5(SBI_EXT_EBI, &EDRV_PA_START, &EDRV_VA_PA_OFFSET, &inv_map, EBI_OFFSET_REGISTER);
 }
 
+#define L1_CACHE_BYTES 64
+static void flush_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
+	asm volatile(".long 0x01b0000b");		/*sync.is*/
+}
+
+static void test(uintptr_t va)
+{
+	static uintptr_t pa = 0x48800000;
+	map_page(NULL, va, pa, 1, -1);
+	printd("[S mode test] log 1\n");
+	pa += EPAGE_SIZE;
+	printd("[S mode test] log 2\n");
+}
+
 /* Initialize memory for driver, including stack, heap, page table */
 void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
 {
@@ -135,10 +153,10 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     extern char _page_table_start,  _page_table_end;
     uintptr_t page_table_start = (uintptr_t)&_page_table_start;
     uintptr_t page_table_end = (uintptr_t)&_page_table_end;
-    uintptr_t init_data_size = page_table_end - page_table_start;
-    size_t n_base_init_data_pages = (PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
+    uintptr_t page_table_size = page_table_end - page_table_start;
+    size_t n_page_table_pages = (PAGE_UP(page_table_size)) >> EPAGE_SHIFT;
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + page_table_start, page_table_start,
-        n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
+        n_page_table_pages, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] page_table: 0x%x - 0x%x -> 0x%x\n", page_table_start, page_table_end, __pa(page_table_start));
 
     /* base driver .rodata section */
@@ -160,6 +178,26 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + bss_start, bss_start,
         n_base_bss_pages, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] .bss: 0x%x - 0x%x -> 0x%x\n", bss_start, bss_end, __pa(bss_start));
+
+    /* base driver .init.data section */
+    extern char _init_data_start, _init_data_end;
+    uintptr_t init_data_start = (uintptr_t)&_init_data_start;
+    uintptr_t init_data_end = (uintptr_t)&_init_data_end;
+    uintptr_t init_data_size = init_data_end - init_data_start;
+    size_t n_base_init_data_pages = (PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
+    map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + init_data_start, init_data_start,
+        n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
+    printd("[S mode init_mem] .init.data: 0x%x - 0x%x -> 0x%x\n", init_data_start, init_data_end, __pa(init_data_start));
+
+     /* base driver .data section */
+    extern char _data_start, _data_end;
+    uintptr_t data_start = (uintptr_t)&_data_start;
+    uintptr_t data_end = (uintptr_t)&_data_end;
+    uintptr_t data_size = data_end - data_start;
+    size_t n_base_data_pages = (PAGE_UP(data_size)) >> EPAGE_SHIFT;
+    map_page((pte*)pt_root, EDRV_VA_PA_OFFSET + data_start, data_start,
+        n_base_data_pages, PTE_V | PTE_W | PTE_R);
+    printd("[S mode init_mem] .data: 0x%x - 0x%x -> 0x%x\n", data_start, data_end, __pa(data_start));
 
     volatile uintptr_t a7;
     asm volatile ("mv %0, a7"::"r"(a7));
@@ -192,6 +230,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 	uintptr_t sstatus = read_csr(sstatus);
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
+
+    flush_dcache_range(0x40000000, 0x80000000);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

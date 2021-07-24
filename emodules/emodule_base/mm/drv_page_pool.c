@@ -127,6 +127,9 @@ static uintptr_t alloc_mem_from_m(struct pg_list* pool)
     map_page(NULL, addr + EDRV_VA_PA_OFFSET, addr,
                 size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
 
+    // test
+    // SBI_CALL5(0xdeadbeef, addr, 0, 0, 0);
+
     // put the allocated memory into mem pool
     for (uintptr_t page = addr; page < addr + size; page += EPAGE_SIZE) {
         __spa_put(page, pool);

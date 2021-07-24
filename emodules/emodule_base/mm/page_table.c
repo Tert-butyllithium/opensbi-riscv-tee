@@ -60,16 +60,6 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
      * Note: l[0] = L1, l[2] = l[0]
      */
 
-DEBUG_CONDITION(pa == 0x48800000);
-DEBUG	print_color("---------------------------");
-DEBUG	printd("[S mode trie_get_or_insert] va = 0x%lx, pa = 0x%lx\n", va, pa);
-DEBUG	printd("[S mode trie_get_or_insert] satp = 0x%lx\n",
-		read_csr(satp));
-DEBUG	printd("[S mode trie_get_or_insert] page table root is at %p, pa = 0x%lx\n",
-		&page_directory_pool, get_pa((uintptr_t)&page_directory_pool));
-DEBUG	printd("[S mode trie_get_or_insert] trie is at %p\n",
-		t);
-
 	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
 	pte *tmp_pte;
@@ -80,35 +70,16 @@ DEBUG	printd("[S mode trie_get_or_insert] trie is at %p\n",
 		if (!t->next[p][l[i]]) {
 			t->next[p][l[i]] = ++t->cnt;
 			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
-			tmp_pte = &page_directory_pool[p][l[i]];
-DEBUG			printd("[S mode trie_get_or_insert] pte to modify @ %p\n", tmp_pte);
-DEBUG			SBI_CALL5(0xdeadbeef, get_pa((uintptr_t)tmp_pte), 0, 0, 0); // dump memory
 
-			if (read_csr(satp)) {
-				page_directory_pool[p][l[i]].ppn = get_pa((uintptr_t)&page_directory_pool[t->cnt][0]) >> 12;
-DEBUG				printd("[S mode trie_get_or_insert] new page directory: 0x%p\n", &page_directory_pool[t->cnt][0]);
-DEBUG				printd("[S mode trie_get_or_insert] ppn: 0x%lx\n", page_directory_pool[p][l[i]].ppn);
-			} else {
-				tmp_pte->ppn = (uintptr_t)&page_directory_pool[t->cnt][0] >> 12;
-			}
+			tmp_pte = &page_directory_pool[p][l[i]];
+			tmp_pte->ppn = ((uintptr_t)&page_directory_pool[t->cnt][0] - va_pa_offset()) >> 12;
 			tmp_pte->pte_v = 1;
-DEBUG			SBI_CALL5(0xdeadbeef, get_pa((uintptr_t)tmp_pte), 0, 0, 0); // dump memory
 		}
 
-DEBUG		tmp_pte = &page_directory_pool[p][l[i]];
-DEBUG		printd("[S mode trie_get_or_insert] p = %d, l[%d] = 0x%lx\n", p, i, l[i]);
-DEBUG		printd("[S mode trie_get_or_insert] level %d pte @ %p: 0x%lx\n",
-				i, tmp_pte, *(uintptr_t *)tmp_pte);
 		p = t->next[p][l[i]];
 	}
 	// set items for the leaf page table entry
 	tmp_pte	     = &page_directory_pool[p][l[len - 1]];
-DEBUG	printd("[S mode trie_get_or_insert] p = %d, l[%d] = 0x%lx\n", p, i, l[i]);
-DEBUG	printd("[S mode trie_get_or_insert] level %d pte @ %p: 0x%lx\n",
-			i, tmp_pte, *(uintptr_t *)tmp_pte);
-DEBUG	printd("[S mode trie_get_or_insert] pte to modify is at %p, pa at 0x%lx\n",
-			tmp_pte, get_pa((uintptr_t)tmp_pte));
-DEBUG	SBI_CALL5(0xdeadbeef, get_pa((uintptr_t)tmp_pte), 0, 0, 0); // dump memory
 	tmp_pte->ppn = pa >> 12;
 	if (len == 2) {
 		tmp_pte->ppn = (tmp_pte->ppn | MASK_OFFSET) ^ MASK_OFFSET;
@@ -131,10 +102,6 @@ DEBUG	SBI_CALL5(0xdeadbeef, get_pa((uintptr_t)tmp_pte), 0, 0, 0); // dump memory
 		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
 		invalidate_dcache_range(pt_root, pt_root + 0x62000);
 	}
-DEBUG	SBI_CALL5(0xdeadbeef, get_pa((uintptr_t)tmp_pte), 0, 0, 0); // dump memory
-
-DEBUG	printd("[S mode trie_get_or_insert] test: pa = 0x%lx\n", get_pa(va));
-DEBUG	print_color("---------------------------");
 
 	return *((uintptr_t *)tmp_pte);
 }

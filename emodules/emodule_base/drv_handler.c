@@ -35,7 +35,7 @@ void handle_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 }
 
 void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-    printd("[handle_syscall] sepc: 0x%x\n",sepc);
+    printd("[handle_syscall] sepc: 0x%lx\n",sepc);
 
     uintptr_t sstatus = read_csr(sstatus);
     // sstatus |= SSTATUS_SUM;
@@ -82,6 +82,7 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
     }
     printd("[handle_syscall] before writing sepc: sepc = 0x%lx\n", sepc);
     write_csr(sepc, sepc + 4);
+    printd("[handle_syscall] after writing sepc: sepc = 0x%lx\n", read_csr(sepc));
     sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
     // printd("[handle_syscall] before write to sstatus\n");
     write_csr(sstatus, sstatus);

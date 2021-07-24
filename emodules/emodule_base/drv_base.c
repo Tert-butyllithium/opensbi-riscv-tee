@@ -114,18 +114,6 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
 	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
-	print_color("[S mode prepare_boot] -----------------------------------");
-	uintptr_t *ptr = (uintptr_t *)0xc0611000;
-	SBI_CALL5(0xdeadbeef, 0x48611000, 0, 0, 0);
-	*ptr = 0x11223344;
-	printd("[S mode prepare_boot] %p: 0x%lx\n", ptr, *ptr);
-	flush_dcache_range(0x48611000, 0x48612000);
-	SBI_CALL5(0xdeadbeef, 0x48611000, 0, 0, 0);
-	// pte *tmp_pte = (pte *)0xc0611000;
-	// tmp_pte->ppn = 0x5000a;
-	// SBI_CALL5(0xdeadbeef, 0x48611000, 0, 0, 0);
-	print_color("[S mode prepare_boot] -----------------------------------");
-
 	init_other_driver();
 
 	/* allow S mode access U mode memory */

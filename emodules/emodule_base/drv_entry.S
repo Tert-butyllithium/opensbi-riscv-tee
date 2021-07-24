@@ -97,7 +97,6 @@ trap_handler:
     j       ret_to_usr
 1:  
     jal     handle_syscall
-    jal     log
     j       ret_to_usr
 
 ret_to_usr:
@@ -106,6 +105,7 @@ ret_to_usr:
 
     RESTORE_CONTEXT
     csrrw   sp, sscratch, sp
+    jal     log
     sret
 
     .align 4
@@ -143,17 +143,6 @@ _start:
 
 log:
     SAVE_CONTEXT
-    li a7, 0x1
-    li a0, 'h'
-    ecall
-    li a7, 0x1
-    li a0, 'e'
-    ecall
-    li a7, 0x1
-    li a0, 'l'
-    ecall
-    li a7, 0x1
-    li a0, '\n'
-    ecall
+    jal     show_reg
     RESTORE_CONTEXT
     ret

@@ -142,7 +142,8 @@ void print_color(const char* s)
   printd("\033[0;32m%s\033[0m\n", s);
 }
 
-void show_reg(uintptr_t *regs)
+// void show_reg(uintptr_t *regs)
+void show_reg()
 {
   printd("**************** SHOW REG ****************\n");
 
@@ -158,9 +159,9 @@ void show_reg(uintptr_t *regs)
   printd("stvec: 0x%lx\n", stvec);
   printd("satp: 0x%lx\n", satp);
 
-  for (int i = 0; i < 32; i++) {
-    printd("x%d: 0x%lx\n", i, regs[i]);
-  }
+  // for (int i = 0; i < 32; i++) {
+  //   printd("x%d: 0x%lx\n", i, regs[i]);
+  // }
   
   printd("************** END SHOW REG **************\n");
 }

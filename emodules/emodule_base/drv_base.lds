@@ -5,7 +5,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-  . = 0xC0000000;
+  . = 0xC0600000;
   _start = .;
 
   _text_start = .;

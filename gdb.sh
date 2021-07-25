@@ -7,5 +7,7 @@ qemu-system-riscv64 -M virt -m 2048M -nographic -s -S\
 
 
 # add-symbol-file ~/src/linux/vmlinux
-# add-symbol-file ~/workspace/prog/test
 # ~/workspace/tina-d1-open/lichee/brandy-2.0/opensbi/build/platform/qemu/virt/firmware/fw_jump.elf
+
+#       add-symbol-file ~/workspace/prog/alloc
+#       add-symbol-file emodules/emodule_base/emodule_base.bin

@@ -112,11 +112,11 @@ ret_to_usr:
     .section ".text.init"
     .globl  _start
 _start:
-    la      s7, 2f
-    sub     s7, s7, a2      // s7 = 2f - mem_start (mem_start = a2)
+    la      s4, 2f
+    sub     s4, s4, a2      // s4 = 2f - mem_start (mem_start = a2)
     li      s6, EDRV_VA_START
-    add     s7, s6, s7
-    csrw    stvec, s7
+    add     s4, s6, s4
+    csrw    stvec, s4
 
     /* temporary stack */
     la      sp, _temp_stack_end
@@ -125,6 +125,7 @@ _start:
     mv      sp, a1
     sfence.vma
     csrw    satp, a0
+.align 2
 2:
     sfence.vma
 

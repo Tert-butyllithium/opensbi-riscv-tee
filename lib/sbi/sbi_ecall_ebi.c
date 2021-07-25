@@ -6,9 +6,15 @@
 #include <sbi/sbi_version.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
+#include <sbi/sbi_ecall_ebi_mem.h>
 
 extern char _base_start, _base_end;
 extern char _enclave_start, _enclave_end;
+
+static int hartid_to_eid(int hartid)
+{
+    return enclave_on_core[hartid];
+}
 
 static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 unsigned long extid, unsigned long funcid,
@@ -16,8 +22,10 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 				 struct sbi_trap_info *out_trap)
 {
 	int ret		    = 0;
-    unsigned long core = csr_read(mhartid); // TODO(haonan): needs to verify this value is the core id;
+    unsigned long core = csr_read(mhartid);
     ulong mepc = csr_read(CSR_MEPC);
+    int eid = hartid_to_eid(core);
+    enclave_context *context = &enclaves[eid];
 
     struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
 
@@ -28,11 +36,6 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
             extid, funcid, args[0], args[1], core);
         sbi_printf("[sbi_ecall_ebi_handler] _base_start @ %p, _base_end @ %p\n", &_base_start, &_base_end);
         sbi_printf("[sbi_ecall_ebi_handler] _enclave_start @ %p, _enclave_end @ %p\n", &_enclave_start, &_enclave_end);
-        // sbi_printf("handle syscall %d %lx %lx at core %ld\n", (int)extid, args[0], args[1], core);
-        // sbi_printf("Enclave Created: %lx %lx %lx\n", args[0], args[1], args[2]);
-        // sbi_printf("base_start @ %p\n", &_base_start);
-        // regs[A0_INDEX] = create_enclave(regs, mepc);
-        //write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
         ret = create_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] after create_enclave\n");
         return ret;
@@ -41,14 +44,50 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[sbi_ecall_ebi_handler] enter\n");
         enter_enclave(args, mepc);
         sbi_printf("[sbi_ecall_ebi_handler] back from enter_enclave\n");
-        sbi_printf("[sbi_ecall_ebi_handler] into->pa: 0x%lx\n", regs->a1);
+        sbi_printf("[sbi_ecall_ebi_handler] id = %lx, into->pa: 0x%lx\n", regs->a1, regs->a2);
         return ret;
 
     case SBI_EXT_EBI_EXIT:
-        sbi_printf("[sbi_ecall_ebi_handler] exit\n");
+        sbi_printf("[M mode sbi_ecall_ebi_handler] enclave %lx exit\n", regs->a0);
         exit_enclave(regs);
 	    return ret;
+    
+    case SBI_EXT_EBI_PERI_INFORM:
+        inform_peri(regs);
+        return ret;
+
+    case SBI_EXT_EBI_MEM_ALLOC:
+        sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
+        uintptr_t pa = alloc_section_for_enclave(context); // pa should be passed to enclave by regs
+        if (pa) {
+            regs->a1 = pa;
+            regs->a2 = SECTION_SIZE;
+        }
+        else {
+            sbi_printf("[M mode SBI_EXT_EBI_MEM_ALLOC] allocation failed\n");
+            exit_enclave(regs);
+        }
+        return ret;
+
+    case SBI_EXT_EBI_OFFSET_REGISTER:
+        sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_OFFSET_REGISTER\n");
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&EDRV_PA_START = 0x%lx\n", regs->a0);
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&EDRV_VA_PA_OFFSET = 0x%lx\n", regs->a1);
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&inv_map = 0x%lx\n", regs->a2);
+        if (!(regs->a0 && regs->a1 && regs->a2)) {
+            sbi_printf("[M mode sbi_ecall_ebi_handler] invalid ecall, check input\n");
+            return ret;
+        }
+
+        context->pa_start_addr= regs->a0;
+        context->va_pa_offset_addr = regs->a1;
+        context->inverse_map_addr = regs->a2;
+        return ret;
     }
+
 
 
     return ret;

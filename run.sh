@@ -1,4 +1,4 @@
-qemu-system-riscv64 -M virt -m 1024M -nographic\
+qemu-system-riscv64 -M virt -m 2048M -nographic\
         -kernel build/platform/qemu/virt/firmware/fw_jump.elf \
         -device loader,file=/home/prongs/src/linux/arch/riscv/boot/Image,addr=0xa2000000 \
         -drive file=/home/prongs/src/busybox/root.bin,format=raw,id=hd0 \

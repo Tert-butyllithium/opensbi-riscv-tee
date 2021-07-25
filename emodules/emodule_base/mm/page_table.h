@@ -1,11 +1,11 @@
 #pragma once
 
 #include "../drv_util.h"
+#include "../drv_mem.h"
 
-#define EDRV_PA_START    0x80000000
+// #define EDRV_PA_START    0x40000000
 #define EDRV_VA_START    0xC0000000
 #define EDRV_DRV_START   0xD0000000
-#define EDRV_VA_PA_OFFSET     (EDRV_VA_START - EDRV_PA_START)
 
 
 #define EPAGE_SIZE 4096
@@ -40,18 +40,32 @@ typedef struct pte {
     uintptr_t __unused_value: 10;
 } pte;
 
+typedef struct inverse_map {
+    uintptr_t pa;
+    uintptr_t va;
+    uint32_t count;
+} inverse_map;
 
 typedef struct trie {
 	uint32_t next[PAGE_DIR_POOL][512], cnt;
 } trie;
 typedef pte page_directory[512];
 
-void map_page(pte *, uintptr_t, uintptr_t, size_t, uintptr_t);
+extern uintptr_t EDRV_PA_START;
+extern uintptr_t EDRV_VA_PA_OFFSET;
+extern inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];
+
+void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages, uintptr_t attr);
 uintptr_t ioremap(pte *, uintptr_t, size_t);
-uintptr_t alloc_page(pte *, uintptr_t, size_t, uintptr_t, char);
+uintptr_t alloc_page(pte *, uintptr_t, uintptr_t, uintptr_t, char);
 uintptr_t get_pa(uintptr_t);
+void print_pte(uintptr_t va);
+void test_va(uintptr_t va);
 uintptr_t get_page_table_root(void);
 void all_zero(void);
-// pte* get_pte(pte*, uintptr_t, char);
+void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
+void inverse_map_add_count(uintptr_t pa);
+inverse_map look_up_inverse_map(uintptr_t pa);
+void dump_inverse_map();
 
 #endif

@@ -145,7 +145,8 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		 * case should be handled differently.
 		 */
 		regs->mepc += 4;
-		regs->a0 = ret;
+		if (!(extension_id == SBI_EXT_EBI && func_id == SBI_EXT_EBI_ENTER))
+			regs->a0 = ret;
 		if (!is_0_1_spec && extension_id != SBI_EXT_EBI)
 			regs->a1 = out_val;
 	}
@@ -180,6 +181,9 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_ebi);
+	if (ret)
+		return ret;
+	ret = sbi_ecall_register_extension(&ecall_debug);
 	init_enclaves();
 	sbi_printf("############### init ecall_ebi successfully\n");
 	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);

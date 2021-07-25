@@ -5,7 +5,7 @@ CFLAGS = -nostdlib -static -mcmodel=medany -g -O0 -I../util
 
 link_script = drv_console.lds
 headers = drv_console.h 
-src = drv_console.c 
+src = drv_console.c ../emodule_base/drv_util.c 
 
 target_dir = ../../firmware
 

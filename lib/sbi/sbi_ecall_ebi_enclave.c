@@ -4,10 +4,14 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_string.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/sbi_hart.h>
+#include <sbi/sbi_ecall_ebi_mem.h>
 
-#define MAX_PAGE 8192
-static enclave_page_t pages[MAX_PAGE];
-static size_t max_pages;
+// #define MAX_PAGE 8192
+// static enclave_page_t pages[MAX_PAGE];
+// static size_t max_pages;
+
+
 
 void poweroff(uint16_t code)
 {
@@ -115,117 +119,158 @@ static inline void store_uint64_t(uint64_t *addr, uint64_t val, uintptr_t mepc)
 	store_uint32_t((uint32_t *)addr + 1, val >> 32, mepc);
 }
 
-void enclave_mem_init()
+void pmp_update(enclave_context *context)
 {
-	uintptr_t page_start, page_end;
-	page_start		   = (uintptr_t)&_enclave_start;
-	page_end		   = (uintptr_t)&_enclave_end;
-	size_t enclave_memory_size = page_end - page_start;
-	assert(enclave_memory_size % EPAGE_SIZE == 0);
-	max_pages = enclave_memory_size / EPAGE_SIZE;
+	// if (!context) 
+	// 	return;
 
-	assert(max_pages <=
-	       MAX_PAGE); // ensure we can keep track of all memory.
-	sbi_memset(pages, 0, sizeof(enclave_page_t) * max_pages);
-	for (size_t i = 0; i < max_pages; i++) {
-		pages[i].pa	= page_start + i * EPAGE_SIZE;
-		pages[i].status = PAGE_FREE;
-	}
-}
+	// uintptr_t p0 = context->pmp_reg[0].pmp_start >> PMP_SHIFT,
+	// 	  p1 = context->pmp_reg[0].pmp_size >> PMP_SHIFT,
+	// 	  p2 = context->pmp_reg[1].pmp_start >> PMP_SHIFT,
+	// 	  p3 = context->pmp_reg[1].pmp_size >> PMP_SHIFT,
+	// 	  p4 = context->pmp_reg[2].pmp_start >> PMP_SHIFT,
+	// 	  p5 = context->pmp_reg[2].pmp_size >> PMP_SHIFT,
+	// 	  p6 = context->pmp_reg[3].pmp_start >> PMP_SHIFT,
+	// 	  p7 = context->pmp_reg[3].pmp_size >> PMP_SHIFT,
+	// 	  cfg = 0;
 
-uintptr_t enclave_mem_alloc(enclave_context *context, size_t enclave_size)
-{
-	enclave_page_t page;
-	assert((enclave_size & MASK(EPAGE_SHIFT)) ==
-	       0); // at least one page should be allocated
-	size_t page_num = enclave_size >> EPAGE_SHIFT;
-	/* Look for available memory */
-	char ok		= 0;
-	size_t page_idx = 0;
-	for (size_t i = 0; i < max_pages; i++) {
-		page = pages[i];
-		if (page.status == PAGE_FREE) {
-			ok = 1;
-			for (size_t j = i + 1;
-			     j - i < page_num && j < max_pages; j++) {
-				page = pages[j];
-				if (page.status != PAGE_FREE) {
-					i  = j + 1;
-					ok = 0;
-					break;
-				}
-			}
-			if (ok) {
-				page_idx = i;
-				break;
-			}
-		}
-	}
-	if (!ok) {
-		sbi_printf("alloc enclave memory failed\n");
-		return EBI_ERROR;
-	}
-	/* Mark used pages */
-	for (size_t i = 0; i < page_num; i++) {
-		pages[page_idx + i].status = PAGE_USED;
-		sbi_memset((void *)pages[page_idx + i].pa, 0, EPAGE_SIZE);
-	}
+	// for (int i = 0; i < PMP_REGION_MAX; i++) {
+	// 	if (context->pmp_reg[i].used) {
+	// 		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X)
+	// 			<< (8 + 16 * i);
+	// 		sbi_printf("[m mode pmp_update] PMP%d used: "
+	// 				"start: 0x%lx, size: 0x%lx, "
+	// 				"cfg: 0x%lx\n",
+	// 				i, context->pmp_reg[i].pmp_start,
+	// 				context->pmp_reg[i].pmp_size, cfg);
+	// 	}
+	// }
 
-	page	    = pages[page_idx];
-	context->pa = page.pa;
-	sbi_printf("[enclave_mem_alloc] context->pa = %lx\n", context->pa);
-	context->mem_size = enclave_size;
-	return EBI_OK;
-}
+	// pmp off
+	uintptr_t p0, p1, p2, p3, p4, p5, p6, p7, cfg;
+	p0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = cfg = 0;
 
-uintptr_t enclave_mem_free(enclave_context *context)
-{
-	assert(context->mem_size % EPAGE_SIZE == 0);
-	size_t page_nums = context->mem_size >> EPAGE_SHIFT;
-
-	uintptr_t start_page_index = (context->pa - pages[0].pa) >> EPAGE_SHIFT;
-	while (page_nums-- > 0) {
-		pages[start_page_index++].status = PAGE_FREE;
-	}
-	return EBI_OK;
-}
-
-#define NUM_ENCLAVE 2
-static enclave_context enclaves[NUM_ENCLAVE + 1];
-
-void pmp_switch(enclave_context *context)
-{
-	uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
-	if (context == NULL) {
-		// Switch to Linux
-		extern char _enclave_end;
-		p0  = (uintptr_t)(FW_TEXT_START) >> PMP_SHIFT;
-		p1  = (uintptr_t)(&_enclave_end) >> PMP_SHIFT;
-		cfg = PMP_A_TOR << 8;
-		p2  = 0 >> PMP_SHIFT;
-		p3  = -1UL >> PMP_SHIFT;
-		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-	} else {
-		// Switch to other enclave
-		p0  = context->pa >> PMP_SHIFT;
-		p1  = (context->pa + context->mem_size) >> PMP_SHIFT;
-		cfg = (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 8;
-		p2  = 0UL >> PMP_SHIFT;
-		p3  = PHY_MEM_START >> PMP_SHIFT;
-		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-		p4 = PHY_MEM_END >> PMP_SHIFT;
-		p5 = -1UL >> PMP_SHIFT;
-		cfg |= (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
-	}
 	asm volatile("csrw pmpaddr0, %[p0]\n\t"
 		     "csrw pmpaddr1, %[p1]\n\t"
 		     "csrw pmpaddr2, %[p2]\n\t"
 		     "csrw pmpaddr3, %[p3]\n\t"
 		     "csrw pmpaddr4, %[p4]\n\t"
 		     "csrw pmpaddr5, %[p5]\n\t"
-		     "csrw pmpcfg0, %[cfg]" ::[p0] "r"(p0),
-		     [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3), [p4] "r"(p4),
-		     [p5] "r"(p5), [cfg] "r"(cfg));
+		     "csrw pmpaddr6, %[p6]\n\t"
+		     "csrw pmpaddr7, %[p7]\n\t"
+		     "csrw pmpcfg0, %[cfg]" ::
+		     [p0] "r"(p0), [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3),
+		     [p4] "r"(p4), [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7),
+		     [cfg] "r"(cfg));
+}
+
+// Allocate initial memory for enclave
+// @param:
+// context: enclave context
+// enclave_size: currently we only support initial mem less than a section.
+//		 more memory case should be supported later
+uintptr_t enclave_initial_mem_alloc(enclave_context *context, size_t enclave_size)
+{
+	uintptr_t pa;
+
+	if (enclave_size > SECTION_SIZE) {
+		sbi_printf("[enclave_initial_mem_alloc] allocation failed: "
+				"Currently only initial mem less than 0x%lx "
+				"is supported. 0x%lx requested\n",
+				SECTION_SIZE, enclave_size);
+		return 0;
+	}
+
+	pa = alloc_section_for_enclave(context);
+
+	context->pa = pa;
+	sbi_printf("[enclave_initial_mem_alloc] context->pa = %lx\n", context->pa);
+	context->mem_size = enclave_size;
+	return EBI_OK;
+}
+
+uintptr_t enclave_mem_free(enclave_context *context)
+{
+	int eid = context->id;
+
+	sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
+	free_section_for_enclave(eid);
+
+	return EBI_OK;
+}
+
+enclave_context enclaves[NUM_ENCLAVE + 1];
+int enclave_on_core[NUM_CORES]; 
+
+void pmp_switch(enclave_context *context)
+{
+	// sbi_printf("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
+	// uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0, cfg = 0;
+	// if (context == NULL) {
+	// 	// Switch to Linux
+	// 	extern char _enclave_end;
+	// 	p0  = (uintptr_t)(FW_TEXT_START) >> PMP_SHIFT;
+	// 	p1  = (uintptr_t)(&_enclave_end) >> PMP_SHIFT;
+	// 	cfg = PMP_A_TOR << 8;
+	// 	p2  = 0 >> PMP_SHIFT;
+	// 	p3  = -1UL >> PMP_SHIFT;
+	// 	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+
+	// } else {
+	// 	// Switch to some enclave
+	// 	p6 = 0UL >> PMP_SHIFT;
+	// 	p7 = -1UL >> PMP_SHIFT;
+	// 	// p6 = context->pa >> PMP_SHIFT;
+	// 	// p7 = (context->pa + context->mem_size) >> PMP_SHIFT;
+	// 	cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
+	// 	sbi_printf("[m mode pmp_switch] p6 = 0x%lx, p7 = 0x%lx, cfg = 0x%lx\n",
+	// 		p6, p7, cfg);
+	// }
+
+	// asm volatile("csrw pmpaddr0, %[p0]\n\t"
+	// 	     "csrw pmpaddr1, %[p1]\n\t"
+	// 	     "csrw pmpaddr2, %[p2]\n\t"
+	// 	     "csrw pmpaddr3, %[p3]\n\t"
+	// 	     "csrw pmpaddr4, %[p4]\n\t"
+	// 	     "csrw pmpaddr5, %[p5]\n\t"
+	// 	     "csrw pmpaddr6, %[p6]\n\t"
+	// 	     "csrw pmpaddr7, %[p7]\n\t"
+	// 	     "csrw pmpcfg0, %[cfg]" ::[p0] "r"(p0),
+	// 	     [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3), [p4] "r"(p4),
+	// 	     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
+}
+
+void pmp_allow_access(peri_addr_t* peri){
+	// __attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
+	// cfg = csr_read(CSR_PMPCFG0);
+	// p2 = peri->reg_pa_start >> PMP_SHIFT;
+	// p3 = (peri->reg_pa_start + peri->reg_size) >> PMP_SHIFT;
+	// cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+	// sbi_printf("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
+
+	// asm volatile(
+	//      "csrw pmpaddr2, %[p2]\n\t"
+	//      "csrw pmpaddr3, %[p3]\n\t"
+	//      "csrw pmpcfg0, %[cfg]" ::[p2] "r"(p2), [p3] "r"(p3), [cfg] "r"(cfg));
+	// flush_tlb();
+}
+
+void pmp_allow_region(uintptr_t pa, uintptr_t size)
+{
+	// uintptr_t p4, p5, cfg;
+	// cfg = csr_read(CSR_PMPCFG0);
+	// p4 = pa >> PMP_SHIFT;
+	// p5 = (pa + size) >> PMP_SHIFT;
+	// cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
+	// sbi_printf("[pmp_allow_region] PMP 0x%lx ~ 0x%lx\n",
+	// 		p4 << PMP_SHIFT,
+	// 		p5 << PMP_SHIFT);
+
+	// asm volatile(
+	//      "csrw pmpaddr4, %[p4]\n\t"
+	//      "csrw pmpaddr5, %[p5]\n\t"
+	//      "csrw pmpcfg0, %[cfg]" ::[p4] "r"(p4), [p5] "r"(p5), [cfg] "r"(cfg));
+	// flush_tlb();
 }
 
 void save_umode_context(enclave_context *context, struct sbi_trap_regs *regs)
@@ -316,7 +361,7 @@ void memcpy_from_user(uintptr_t uaddr, uintptr_t maddr, uintptr_t size,
 
 uintptr_t find_avail_enclave()
 {
-	for (size_t i = 0; i < NUM_ENCLAVE; ++i) {
+	for (size_t i = 1; i <= NUM_ENCLAVE; ++i) {
 		if (enclaves[i].status == ENC_FREE)
 			return i;
 	}
@@ -325,10 +370,11 @@ uintptr_t find_avail_enclave()
 
 void init_enclaves(void)
 {
-	enclave_mem_init();
-	sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
-	enclaves[NUM_ENCLAVE].status = ENC_RUN;
-	for (size_t i = 0; i < NUM_ENCLAVE; ++i)
+	// enclave_mem_init();
+	init_memory_pool();
+	// sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
+	enclaves[0].status = ENC_RUN;
+	for (size_t i = 1; i <= NUM_ENCLAVE; ++i)
 		enclaves[i].status = ENC_FREE;
 	sbi_printf("[EBI] enclaves init successfully!");
 }
@@ -354,11 +400,13 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	if (avail_id == EBI_ERROR)
 		return EBI_ERROR;
 	/* LOADED enclave, loaded not running */
-	enclaves[avail_id].status = ENC_LOAD;
 	context			  = &enclaves[avail_id];
-	sbi_printf("[create_enclave] log2\n");
+	context->status = ENC_LOAD;
+	context->id = avail_id;
+	
+	sbi_printf("[create_enclave] log2: enclave id: %lx\n", context->id);
 
-	if (EBI_OK != enclave_mem_alloc(context, EMEM_SIZE))
+	if (EBI_OK != enclave_initial_mem_alloc(context, EMEM_SIZE))
 		return EBI_ERROR;
 	sbi_printf("[create_enclave] log3\n");
 
@@ -398,9 +446,10 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 {
 	uintptr_t id	      = args[0];
-	enclave_context *into = &enclaves[id], *from = &enclaves[NUM_ENCLAVE];
+	enclave_context *into = &enclaves[id], *from = &enclaves[0];
+	uint32_t hartid = sbi_current_hartid();
 
-	sbi_printf("[enter_enclave] log1\n");
+	sbi_printf("[enter_enclave] enclave id = %lx\n", id);
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
 		return EBI_ERROR;
 
@@ -416,6 +465,8 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 	restore_csr_context(into, regs);
 	flush_tlb();
 
+	enclave_on_core[hartid] = id;
+
 	/* User parameter */
 	/* argc and argv */
 	//TODO: args --> regs
@@ -423,27 +474,34 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 	regs->a5 = into->user_param;
 
 	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
+	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
 
-	regs->a0     = id;
-	regs->a1     = into->pa;
-	regs->a2     = into->enclave_binary_size;
-	regs->a3     = into->drv_list;
-	into->status = ENC_RUN;
-	from->status = ENC_IDLE;
-	return regs->a0;
+	regs->a0 = id;
+	regs->a1 = id;
+	regs->a2 = into->pa;
+	regs->a3 = into->enclave_binary_size;
+	regs->a4 = into->drv_list;
+	into->status   = ENC_RUN;
+	from->status   = ENC_IDLE;
+	return id;
 }
 
 uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 {
 	uintptr_t id = regs->a0, retval = regs->a1;
+	uint32_t hartid = sbi_current_hartid();
 
-	enclave_context *from = &(enclaves[id]), *into = &enclaves[NUM_ENCLAVE];
+	sbi_printf("[exit_enclave] exit enclave %lx\n", id);
+
+	enclave_context *from = &(enclaves[id]), *into = &enclaves[0];
 	if (from->status != ENC_RUN || into->status != ENC_IDLE)
 		return EBI_ERROR;
 
-	sbi_memset((void *)from->pa, 0, EMEM_SIZE);
+	// sbi_memset((void *)from->pa, 0, EMEM_SIZE);
 	enclave_mem_free(from);
 	// clean and switch pmp
+
+	enclave_on_core[hartid] = 0;
 	pmp_switch(NULL);
 	restore_umode_context(into, regs);
 	restore_csr_context(into, regs);
@@ -454,7 +512,23 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	into->status = ENC_RUN;
 	return EBI_OK;
 }
+
+void inform_peri(struct sbi_trap_regs *regs){
+	int hartid		 = sbi_current_hartid();
+	enclave_context *current_enclave = &enclaves[enclave_on_core[hartid]];
+	uintptr_t pa		 = regs->a0;
+	uintptr_t va		 = regs->a1;
+	uintptr_t sz		 = regs->a2;
+	current_enclave->peri_list[current_enclave->peri_cnt].reg_pa_start = pa;
+	current_enclave->peri_list[current_enclave->peri_cnt].reg_va_start = va;
+	current_enclave->peri_list[current_enclave->peri_cnt].reg_size = sz;
+	sbi_printf("\033[0;36mperiphare id %d, pa: 0x%lx, va: 0x%lx, sz: 0x%lx\n\033[0m",
+		   current_enclave->peri_cnt, pa, va, sz);
+	current_enclave->peri_cnt++;
+}
+
 // TODO: actually pause/resume can replace enter/exit
+// NOTE: remember to update the `enclave_on_core`
 /* pause an enclave, do not take care of ret */
 uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc)
 {
@@ -507,11 +581,12 @@ drv_addr_t bbl_addr_list[MAX_DRV] = {
 	//     {(uintptr_t)&_drv_rtc_start, (uintptr_t)&_drv_rtc_end, -1}
 };
 
+
 // drv_addr_t bbl_addr_list[MAX_DRV] = {};
 
 uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 {
-	drv_addr_t drv_addr_list[64] = {};
+	drv_addr_t _local_drv_addr_list[64] = {};
 	int cnt			     = 0;
 	for (int i = 0; i < MAX_DRV; i++) {
 		if (bbl_addr_list[i].drv_start && (bitmask & (1 << i))) {
@@ -519,21 +594,20 @@ uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 			uintptr_t drv_start = bbl_addr_list[i].drv_start;
 			uintptr_t drv_size  = bbl_addr_list[i].drv_end -
 					     bbl_addr_list[i].drv_start;
-			drv_addr_list[cnt].drv_start = *start_addr;
-			drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
-			sbi_printf(
-				"[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n",
-				i, drv_addr_list[cnt].drv_start,
-				drv_addr_list[cnt].drv_end);
+			_local_drv_addr_list[cnt].drv_start = *start_addr;
+			_local_drv_addr_list[cnt].drv_end   = *start_addr + drv_size;
+			sbi_printf("[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n", i,
+				   _local_drv_addr_list[cnt].drv_start,
+				   _local_drv_addr_list[cnt].drv_end);
 			cnt++;
 			sbi_memcpy((void *)(*start_addr), (void *)drv_start,
 				   drv_size);
 			*start_addr += drv_size;
 		}
 	}
-	sbi_memcpy((void *)*start_addr, (void *)drv_addr_list,
-		   sizeof(drv_addr_list));
-	return sizeof(drv_addr_list);
+	sbi_memcpy((void *)*start_addr, (void *)_local_drv_addr_list,
+	       sizeof(_local_drv_addr_list));
+	return sizeof(_local_drv_addr_list);
 }
 
 char drvfetch(int enclave_id, int driver_id)

@@ -128,3 +128,42 @@ void printd(const char *s, ...)
 	vprintd(s, vl);
 	va_end(vl);
 }
+
+void *my_memset(void *s, int c,  unsigned int len)
+{
+    unsigned char* p=s;
+    while(len--)
+    {
+        *p++ = (unsigned char)c;
+    }
+    return s;
+}
+
+void print_color(const char* s)
+{
+  printd("\033[0;32m%s\033[0m\n", s);
+}
+
+// void show_reg(uintptr_t *regs)
+void show_reg()
+{
+  printd("**************** SHOW REG ****************\n");
+
+  uintptr_t sstatus, sepc, stvec, satp;
+  
+  sstatus = read_csr(sstatus);
+  sepc = read_csr(sepc);
+  stvec = read_csr(stvec);
+  satp = read_csr(satp);
+
+  printd("status: 0x%lx\n", sstatus);
+  printd("sepc: 0x%lx\n", sepc);
+  printd("stvec: 0x%lx\n", stvec);
+  printd("satp: 0x%lx\n", satp);
+
+  // for (int i = 0; i < 32; i++) {
+  //   printd("x%d: 0x%lx\n", i, regs[i]);
+  // }
+  
+  printd("************** END SHOW REG **************\n");
+}

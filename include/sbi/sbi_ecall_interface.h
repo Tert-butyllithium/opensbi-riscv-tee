@@ -28,6 +28,7 @@
 #define SBI_EXT_RFENCE				0x52464E43
 #define SBI_EXT_SRST                            0x53525354
 #define SBI_EXT_EBI				0x19260817
+#define SBI_EXT_DEBUG           		0xdeadbeef
 
 /* SBI function IDs for BASE extension*/
 #define SBI_EXT_BASE_GET_SPEC_VERSION		0x0
@@ -77,12 +78,16 @@
 #define SBI_EXT_EBI_CREATE  399
 #define SBI_EXT_EBI_ENTER   400
 #define SBI_EXT_EBI_EXIT    401
-#define SBI_EXT_EBI_GOTO    402
-#define SBI_EXT_EBI_FETCH   403
-#define SBI_EXT_EBI_RELEASE 404
+// #define SBI_EXT_EBI_GOTO    402
+// #define SBI_EXT_EBI_FETCH   403
+// #define SBI_EXT_EBI_RELEASE 404
+#define SBI_EXT_EBI_MEM_ALLOC 405
+#define SBI_EXT_EBI_OFFSET_REGISTER 406
 
 #define SBI_EXT_EBI_PUTS    410
 #define SBI_EXT_EBI_GETS    411
+
+#define SBI_EXT_EBI_PERI_INFORM 420
 
 /* clang-format on */
 

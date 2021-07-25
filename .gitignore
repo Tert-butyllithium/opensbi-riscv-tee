@@ -14,3 +14,7 @@ run.sh
 gdb.sh
 make.sh
 .DS_Store
+.vscode/*
+emodules/emodule_base/emodule_base
+emodules/emodule_base/emodule_base.bin
+firmware/emodule_base

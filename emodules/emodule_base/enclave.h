@@ -8,6 +8,8 @@
 #define EBI_GOTO    402
 #define EBI_FETCH   403
 #define EBI_RELEASE 404
+#define EBI_MEM_ALLOC 405
+#define EBI_OFFSET_REGISTER 406
 
 #define EBI_PUTS    410
 #define EBI_GETS    411
@@ -240,7 +242,7 @@ static inline void flush_tlb()
 #define DEFAULT_RSTVEC     0x00001000
 #define CLINT_BASE         0x02000000
 #define CLINT_SIZE         0x000c0000
-#define DRAM_BASE          0x80000000
+#define DRAM_BASE          0x40000000
 
 // page table entry (PTE) fields
 #define PTE_V     0x001 // Valid

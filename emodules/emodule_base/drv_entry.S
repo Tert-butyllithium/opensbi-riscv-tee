@@ -125,6 +125,7 @@ _start:
     mv      sp, a1
     sfence.vma
     csrw    satp, a0
+.align 2
 2:
     sfence.vma
 

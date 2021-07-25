@@ -110,13 +110,14 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
         usr_avail_start + PAGE_DOWN(usr_avail_size), __pa(usr_avail_start));
 
     /* user stack R/W */
-    size_t n_user_stack_pages = (PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 1;
+    size_t n_user_stack_pages = (PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 5;
     printd("[S mode init_mem] user stack needs %d pages\n", n_user_stack_pages);
-    uintptr_t usr_sp = prog_brk + EUSR_STACK_SIZE * EUSR_HEAP_STACK_RATIO;
-    printd("[S mode init_mem] user stack: 0x%x - 0x%x\n", usr_sp, usr_sp + EUSR_STACK_SIZE);
-    alloc_page((pte*)pt_root, usr_sp, n_user_stack_pages,
+    uintptr_t usr_stack_start = EUSR_STACK_START;
+    uintptr_t usr_stack_end = EUSR_STACK_END;
+    printd("[S mode init_mem] user stack: 0x%lx - 0x%lx\n", usr_stack_start, usr_stack_end);
+    alloc_page((pte*)pt_root, usr_stack_start, n_user_stack_pages,
         PTE_V | PTE_W | PTE_R | PTE_U, USR);
-    usr_sp += EUSR_STACK_SIZE;
+    uintptr_t usr_sp = usr_stack_end;
 
     /* Try map pages */
     /* base driver .text section */

@@ -120,8 +120,8 @@
 #define EDRV_MEM_SIZE 0x200000
 #define EDRV_STACK_SIZE 0x8000
 #define EUSR_MEM_SIZE (EMEM_SIZE - EDRV_MEM_SIZE)
-#define EUSR_STACK_SIZE 0x8000
-#define EUSR_HEAP_STACK_RATIO 10
+// #define EUSR_STACK_SIZE 0x8000
+// #define EUSR_HEAP_STACK_RATIO 10
 #define ROUND_UP(addr, size) (((addr) + ((size)-1)) & (~((size)-1)))
 #define PAGE_UP(addr) (ROUND_UP(addr, EPAGE_SIZE))
 #define PAGE_DOWN(addr) ((addr) & (~((EPAGE_SIZE)-1)))

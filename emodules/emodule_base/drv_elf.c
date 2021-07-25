@@ -48,7 +48,7 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id,
         }
     }
     // *prog_brk = PAGE_DOWN(phdr.p_paddr) + PAGE_UP((n_pages + 1)<<EPAGE_SHIFT);
-    *prog_brk = 0x10000000;
+    *prog_brk = EUSR_HEAP_START;
     // Elf64_Shdr *shdr_arr = (Elf64_Shdr *)(elf_addr + ehdr->e_shoff);
     // //printd("there are %d segments\n", ehdr->e_shnum);
     // for (int i = 0; i < ehdr->e_shnum; i++) {

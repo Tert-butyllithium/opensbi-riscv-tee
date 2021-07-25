@@ -36,7 +36,7 @@ int ebi_brk(uintptr_t addr) {
     uintptr_t n_pages, pa;
     if(addr == 0)
         return prog_brk;
-    printd("####### brk start, prog_brk: 0x%x########\n",prog_brk);
+    printd("####### brk start, prog_brk: 0x%lx########\n",prog_brk);
     printd("addr: 0x%lx\n",addr);
     if (addr > PAGE_UP(prog_brk)) {
 	printd("ebi_brk cp 1\n");

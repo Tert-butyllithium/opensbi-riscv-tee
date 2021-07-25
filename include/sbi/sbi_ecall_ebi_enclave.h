@@ -118,15 +118,15 @@
 #define EPPN(addr, level) \
         (((addr) >> EPPN_SHIFT(level)) & ((1 << EPT_LEVEL_BITS) - 1))
 
-#define EMEM_SIZE        0x800000
-#define EDRV_MEM_SIZE    0x200000
-#define EDRV_STACK_SIZE  0x8000
-#define EUSR_MEM_SIZE    (EMEM_SIZE - EDRV_MEM_SIZE)
-#define EUSR_STACK_SIZE  0x8000
-#define EUSR_HEAP_STACK_RATIO 10
-#define ROUND_UP(addr, size)	(((addr) + ((size) - 1)) & (~((size) - 1)))
-#define PAGE_UP(addr)	        (ROUND_UP(addr, EPAGE_SIZE))
-#define PAGE_DOWN(addr)	        ((addr) & (~((EPAGE_SIZE) - 1)))
+#define EMEM_SIZE 0x800000
+#define EDRV_MEM_SIZE 0x200000
+#define EDRV_STACK_SIZE 0x8000
+#define EUSR_MEM_SIZE (EMEM_SIZE - EDRV_MEM_SIZE)
+// #define EUSR_STACK_SIZE 0x8000
+// #define EUSR_HEAP_STACK_RATIO 10
+#define ROUND_UP(addr, size) (((addr) + ((size)-1)) & (~((size)-1)))
+#define PAGE_UP(addr) (ROUND_UP(addr, EPAGE_SIZE))
+#define PAGE_DOWN(addr) ((addr) & (~((EPAGE_SIZE)-1)))
 
 #define NUM_OF_PAGE(size)	\
         (((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))

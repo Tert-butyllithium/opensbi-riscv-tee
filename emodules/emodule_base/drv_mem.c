@@ -20,24 +20,6 @@ static inline void offset_register()
     SBI_CALL5(SBI_EXT_EBI, &EDRV_PA_START, &EDRV_VA_PA_OFFSET, &inv_map, EBI_OFFSET_REGISTER);
 }
 
-#define L1_CACHE_BYTES 64
-static void flush_dcache_range(unsigned long start, unsigned long end)
-{
-	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
-	for (; i < end; i += L1_CACHE_BYTES)
-		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
-	asm volatile(".long 0x01b0000b");		/*sync.is*/
-}
-
-static void test(uintptr_t va)
-{
-	static uintptr_t pa = 0x48800000;
-	map_page(NULL, va, pa, 1, -1);
-	printd("[S mode test] log 1\n");
-	pa += EPAGE_SIZE;
-	printd("[S mode test] log 2\n");
-}
-
 /* Initialize memory for driver, including stack, heap, page table */
 void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
 {

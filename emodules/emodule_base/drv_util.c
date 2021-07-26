@@ -165,3 +165,23 @@ void show_reg()
   
   printd("************** END SHOW REG **************\n");
 }
+
+
+#define L1_CACHE_BYTES 64
+void flush_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
+	asm volatile(".long 0x01b0000b");		/*sync.is*/
+}
+
+void invalidate_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile ("dcache.ipa a0");
+
+	asm volatile (".long 0x01b0000b");
+}

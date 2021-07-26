@@ -11,25 +11,6 @@
 #define printd printf
 #endif
 
-#define L1_CACHE_BYTES 64
-static void flush_dcache_range(unsigned long start, unsigned long end)
-{
-	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
-	for (; i < end; i += L1_CACHE_BYTES)
-		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
-	asm volatile(".long 0x01b0000b");		/*sync.is*/
-}
-
-static void invalidate_dcache_range(unsigned long start, unsigned long end)
-{
-	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
-
-	for (; i < end; i += L1_CACHE_BYTES)
-		asm volatile ("dcache.ipa a0");
-
-	asm volatile (".long 0x01b0000b");
-}
-
 static page_directory page_directory_pool[PAGE_DIR_POOL] __attribute__((section(".page_table")));
 static trie address_trie __attribute__((section(".page_table_trie")));
 

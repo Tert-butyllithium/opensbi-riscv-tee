@@ -13,24 +13,6 @@ drv_ctrl_t* peri_reg_list[MAX_DRV] = {0};
 drv_initer drv_init_list[MAX_DRV];
 drv_addr_t *drv_addr_list;
 
-#define L1_CACHE_BYTES 64
-static void flush_dcache_range(unsigned long start, unsigned long end)
-{
-	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
-	for (; i < end; i += L1_CACHE_BYTES)
-		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
-	asm volatile(".long 0x01b0000b");		/*sync.is*/
-}
-
-static void invalidate_dcache_range(unsigned long start, unsigned long end)
-{
-	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
-
-	for (; i < end; i += L1_CACHE_BYTES)
-		asm volatile ("dcache.ipa a0");
-
-	asm volatile (".long 0x01b0000b");
-}
 
 uintptr_t init_usr_stack(uintptr_t usr_sp)
 {

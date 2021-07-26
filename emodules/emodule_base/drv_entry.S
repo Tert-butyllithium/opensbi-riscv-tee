@@ -105,7 +105,7 @@ ret_to_usr:
 
     RESTORE_CONTEXT
     csrrw   sp, sscratch, sp
-    jal     log
+    # jal     log
     sret
 
     .align 4

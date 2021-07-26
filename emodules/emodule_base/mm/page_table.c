@@ -79,9 +79,10 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 		tmp_pte->pte_x = 1;
 	}
 	if (read_csr(satp)) {
-		flush_tlb();
 		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
-		invalidate_dcache_range(pt_root, pt_root + 0x62000);
+		invalidate_dcache_range(pt_root, pt_root + 0x62000); // invalidation works, why?
+		// flush_dcache_range(pt_root, pt_root + 0x62000);   flush does not work, why?
+		flush_tlb();
 	}
 
 	return *((uintptr_t *)tmp_pte);

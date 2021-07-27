@@ -23,16 +23,8 @@ static struct section *find_avail_section(void);
 static void pmp_allow(struct section *sec);
 static void free_section(uintptr_t sfn);
 static void set_section_zero(uintptr_t sfn);
-
-
-// to do:
-// 1. pmp configuration should be encoded into enclave context so that pmp 
-// can be configured correctly during context switches.
-// 
-// 2. seperate inital memory allocation from OOM memory allocation:
-// initial memory is allocated during creation but should be protected on entering
-// other allocated memory should be protected right after allocation.
-
+static pte* get_pte(uintptr_t pt_root, uintptr_t va);
+static void test(uintptr_t sfn);
 
 
 
@@ -40,7 +32,7 @@ static void set_section_zero(uintptr_t sfn);
 // return: start physical address of the allocated section if success,
 //	   zero otherwise
 // this function should be followed by pmp_update
-uintptr_t alloc_section_for_enclave(enclave_context *context)
+uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 {
 	struct section *sec;
 	uintptr_t eid = context->id;
@@ -53,10 +45,12 @@ uintptr_t alloc_section_for_enclave(enclave_context *context)
 		return 0;
 	}
 	
-	sbi_printf("[alloc_section_for_enclave] section 0x%lx allocated for enclave %lx\n",
-			sec->sfn, eid);
+	sbi_printf("[alloc_section_for_enclave] section 0x%lx allocated for enclave %lx, "
+			"va = 0x%lx\n",
+			sec->sfn, eid, va);
 	set_section_zero(sec->sfn);
 	sec->owner = eid;
+	sec->va = va;
 
 	section_ownership_dump();
 	
@@ -130,6 +124,7 @@ static void free_section(uintptr_t sfn)
 	pmp_withdraw(sec);
 
 	sec->owner = -1;
+	sec->va = 0;
 
 	return;
 }
@@ -153,29 +148,36 @@ void section_ownership_dump()
 {
 	int i, j;
 	struct section *sec;
-	const int line_len = 32;
+	const int line_len = 5; // complex version
+	// const int line_len = 32; // brief version
 
+	// complex version
 	sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
 	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
-		// for (i = 0, sec = &memory_pool[i+j];
-		// 		i < line_len;
-		// 		i++, sec = &memory_pool[i+j])
-		// 	sbi_printf("0x%lx\t", sec->sfn);
-
-		// sbi_printf("\n");
 		for (i = 0, sec = &memory_pool[i+j];
-				i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
-				i++, sec = &memory_pool[i+j]) {
-			if (sec->owner < 0)
-				sbi_printf("x");
-				// sbi_printf("x\t");
-			else
-				sbi_printf("%d", sec->owner);
-				// sbi_printf("%d\t", sec->owner);
-		}
+				i < line_len;
+				i++, sec = &memory_pool[i+j])
+			sbi_printf("0x%lx: 0x%lx\t", sec->sfn, sec->va);
 		sbi_printf("\n");
-		
 	}
+
+	test(memory_pool[0].sfn);
+
+	// brief version (do not delete)
+
+	// for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+
+	// 	for (i = 0, sec = &memory_pool[i+j];
+	// 			i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
+	// 			i++, sec = &memory_pool[i+j]) {
+	// 		if (sec->owner < 0)
+	// 			sbi_printf("x");
+	// 		else
+	// 			sbi_printf("%d", sec->owner);
+	// 	}
+	// 	sbi_printf("\n");
+		
+	// }
 
 	sbi_printf("[M mode section_ownership_dump end]---------------------------\n");
 }
@@ -186,4 +188,60 @@ static void set_section_zero(uintptr_t sfn)
 	sbi_printf("[set_section_zero] section start: %p\n", s);
 	sbi_memset(s, 0, SECTION_SIZE);
 	sbi_printf("[set_section_zero] setting zero done\n");
+}
+
+/**
+ * @brief Get the pte pointer
+ * 
+ * @param pt_root 
+ * @param va 
+ * @return pte* 
+ */
+static pte* get_pte(uintptr_t pt_root, uintptr_t va)
+{
+	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
+			  (va & MASK_L0) >> 12 };
+	pte *root = (pte *)pt_root;
+	pte tmp_entry;
+	uintptr_t tmp;
+	int i = 0;
+
+	sbi_printf("[M mode get_pte] look for pte of va 0x%lx\n", va);
+	while (1) {
+		tmp_entry = root[l[i]];
+		if (!tmp_entry.pte_v) {
+			sbi_printf("ERROR: va:0x%lx is not valid!!!\n", va);
+			return 0;
+		}
+		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
+			sbi_printf("[M mode get_pte] pte = 0x%lx, at %p\n",
+					*(uintptr_t *)&tmp_entry, &root[l[i]]);
+			return &root[l[i]];
+		}
+		tmp  = tmp_entry.ppn << 12;
+		root = (pte *)tmp;
+		i++;
+	}
+}
+
+static void test(uintptr_t sfn)
+{
+	struct section *sec = sfn_to_section(sfn);
+	uintptr_t va = sec->va + 0x600000;
+	uintptr_t eid = sec->owner;
+	uintptr_t pt_root = eid_to_context(eid)->pt_root;
+	pte *entry;
+
+	if (!pt_root)
+		return;
+
+	sbi_printf("[M mode test] start-------------------------------------\n");
+
+	sbi_printf("eid = %d, pt_root = 0x%lx, va = 0x%lx, section 0x%lx\n",
+			(int)eid, pt_root, va, sfn);
+
+	entry = get_pte(pt_root, va);
+	sbi_printf("pte: 0x%lx, at %p\n", *(uintptr_t *)entry, entry);
+
+	sbi_printf("[M mode test] end---------------------------------------\n");
 }

@@ -9,7 +9,7 @@
 #define EBI_FETCH   403
 #define EBI_RELEASE 404
 #define EBI_MEM_ALLOC 405
-#define EBI_OFFSET_REGISTER 406
+#define EBI_MAP_REGISTER 406
 
 #define EBI_PUTS    410
 #define EBI_GETS    411

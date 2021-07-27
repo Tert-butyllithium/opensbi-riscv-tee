@@ -11,7 +11,10 @@
 // static enclave_page_t pages[MAX_PAGE];
 // static size_t max_pages;
 
-
+enclave_context *eid_to_context(uintptr_t eid)
+{
+	return &enclaves[eid];
+}
 
 void poweroff(uint16_t code)
 {
@@ -172,7 +175,7 @@ uintptr_t enclave_initial_mem_alloc(enclave_context *context, size_t enclave_siz
 		return 0;
 	}
 
-	pa = alloc_section_for_enclave(context);
+	pa = alloc_section_for_enclave(context, EDRV_VA_START);
 
 	context->pa = pa;
 	sbi_printf("[enclave_initial_mem_alloc] context->pa = %lx\n", context->pa);
@@ -323,6 +326,8 @@ void init_csr_context(enclave_context *context)
 	context->ns_satp     = 0;
 	context->ns_sie	     = 0;
 	context->ns_stvec    = 0;
+	context->pt_root     = 0;
+	context->inverse_map_addr = 0;
 }
 
 /* Machine mode does not contains the necessary mapping, need to switch back to

@@ -58,7 +58,8 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 
     case SBI_EXT_EBI_MEM_ALLOC:
         sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
-        uintptr_t pa = alloc_section_for_enclave(context); // pa should be passed to enclave by regs
+        uintptr_t va = regs->a0;
+        uintptr_t pa = alloc_section_for_enclave(context, va); // pa should be passed to enclave by regs
         if (pa) {
             regs->a1 = pa;
             regs->a2 = SECTION_SIZE;
@@ -69,22 +70,19 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         }
         return ret;
 
-    case SBI_EXT_EBI_OFFSET_REGISTER:
-        sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_OFFSET_REGISTER\n");
+    case SBI_EXT_EBI_MAP_REGISTER:
+        sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MAP_REGISTER\n");
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
-                    "&EDRV_PA_START = 0x%lx\n", regs->a0);
+                    "pt_root = 0x%lx\n", regs->a0);
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
-                    "&EDRV_VA_PA_OFFSET = 0x%lx\n", regs->a1);
-        sbi_printf("[M mode sbi_ecall_ebi_handler] "
-                    "&inv_map = 0x%lx\n", regs->a2);
-        if (!(regs->a0 && regs->a1 && regs->a2)) {
+                    "&inv_map = 0x%lx\n", regs->a1);
+        if (!(regs->a0 && regs->a1)) {
             sbi_printf("[M mode sbi_ecall_ebi_handler] invalid ecall, check input\n");
             return ret;
         }
 
-        context->pa_start_addr= regs->a0;
-        context->va_pa_offset_addr = regs->a1;
-        context->inverse_map_addr = regs->a2;
+        context->pt_root = regs->a0;
+        context->inverse_map_addr = regs->a1;
         return ret;
     }
 

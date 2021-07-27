@@ -118,6 +118,7 @@
 #define EPPN(addr, level) \
         (((addr) >> EPPN_SHIFT(level)) & ((1 << EPT_LEVEL_BITS) - 1))
 
+#define EDRV_VA_START 0xC0000000
 #define EMEM_SIZE 0x800000
 #define EDRV_MEM_SIZE 0x200000
 #define EDRV_STACK_SIZE 0x8000
@@ -132,8 +133,6 @@
         (((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))
 
 #define PERI_NUM_MAX 128
-
-#define EUSR_VA_START    0x0
 
 #include <stdint.h>
 #include <stddef.h>
@@ -179,8 +178,7 @@ typedef struct {
     uint8_t peri_cnt;
     char status;
 
-    uintptr_t pa_start_addr; // &EDRV_PA_START (phys addr)
-    uintptr_t va_pa_offset_addr; // &EDRV_VA_PA_OFFSET (phys addr)
+    uintptr_t pt_root;
     uintptr_t inverse_map_addr; // &inv_map (phys addr)
 
     pmp_region pmp_reg[PMP_REGION_MAX];
@@ -195,6 +193,7 @@ extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
 extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 extern void init_enclaves(void);
+enclave_context *eid_to_context(uintptr_t eid);
 
 #define PHY_MEM_START 0x40000000UL
 #define PHY_MEM_END 0x80000000UL

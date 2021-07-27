@@ -21,11 +21,19 @@
 #define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
 				>> SECTION_SHIFT)
 
+#define INVERSE_MAP_ENTRY_NUM 1024
+
 struct section {
 	uintptr_t sfn;	// section frame number
 	int owner;	// enclave id of the owner. -1 if unused.
 	uintptr_t va;   // linearly mapped addr of the section
 }; 
+
+typedef struct inverse_map {
+    uintptr_t pa;
+    uintptr_t va;
+    uint32_t count;
+} inverse_map;
 
 extern struct section memory_pool[MEMORY_POOL_SECTION_NUM];
 
@@ -33,3 +41,4 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va);
 void init_memory_pool();
 void free_section_for_enclave(int eid);
 void section_ownership_dump();
+int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn);

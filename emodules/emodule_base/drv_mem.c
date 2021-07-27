@@ -216,8 +216,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
 
-    flush_dcache_range(0x40000000, 0x80000000);
     va_top += EMEM_SIZE;
+    flush_dcache_range(0x40000000, 0x80000000);
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

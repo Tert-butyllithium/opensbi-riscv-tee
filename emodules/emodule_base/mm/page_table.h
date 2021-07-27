@@ -63,7 +63,7 @@ void print_pte(uintptr_t va);
 void test_va(uintptr_t va);
 uintptr_t get_page_table_root(void);
 void all_zero(void);
-void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
+inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
 void inverse_map_add_count(uintptr_t pa);
 void dump_inverse_map();
 

@@ -234,14 +234,21 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 {
 	pte *pt;
 	uintptr_t pa, prev_pa = 0, base_pa = 0;
+	inverse_map *inv_map_entry;
 
 	while (n_pages >= 1) {
 		pa = spa_get_pa_zero(id);
 		if (pa == prev_pa + EPAGE_SIZE
 		&& SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
-			inverse_map_add_count(base_pa);
+			// inverse_map_add_count(base_pa);
+			inv_map_entry->count++;
 		} else {
-			insert_inverse_map(pa, va, 1);
+			inv_map_entry = insert_inverse_map(pa, va, 1);
+			if (!inv_map_entry) {
+				printd("[S mode alloc_page] ERROR!\n");
+				return 0;
+			}
+
 			base_pa = pa;
 		}
 		// printd("[S mode alloc_page] va: 0x%lx, pa: 0x%lx\n", va, pa);
@@ -274,7 +281,8 @@ void all_zero()
 // look up pa first. if pa exists in the table, update it; otherwise
 // insert a new entry
 // when updating, count must match with the previous count
-void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
+// returns the newly inserted entry
+inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 {
 	int i = 0;
 
@@ -292,14 +300,14 @@ void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 					"ERROR: count does not match! "
 					"original count: %d\n", inv_map[i].count);
 				while(1);
-				return;
+				return NULL;
 			}
 			inv_map[i].va = va;
 		}
 	}
 	if (i == INVERSE_MAP_ENTRY_NUM) { // out of entry
 		printd("[s mode insert_inverse_map] NO ENOUGH ENTRY!!!\n");
-		return;
+		return NULL;
 	}
 
 	// new entry
@@ -307,6 +315,8 @@ void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 	inv_map[i].va = va;
 	inv_map[i].count = count;
 	printd("[s mode insert_inverse_map] new entry\n");
+
+	return &inv_map[i];
 }
 
 void inverse_map_add_count(uintptr_t pa)

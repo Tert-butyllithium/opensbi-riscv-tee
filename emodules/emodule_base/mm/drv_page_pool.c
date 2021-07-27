@@ -148,8 +148,8 @@ static uintptr_t alloc_mem_from_m(struct pg_list* pool)
 {
     uintptr_t addr, size;
     unsigned int pool_size;
-    SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_MEM_ALLOC);
-    asm volatile ("mv %0, a1":"=r"(addr));
+    SBI_CALL5(SBI_EXT_EBI, va_top, 0, 0, EBI_MEM_ALLOC);
+    asm volatile ("mv %0, a1":"=r"(addr)); // return value
     asm volatile ("mv %0, a2":"=r"(size));
     printd("[S mode alloc_mem_from_m] mem alloc result: allocated section pa: 0x%lx, size: 0x%lx\n",
                 addr, size);

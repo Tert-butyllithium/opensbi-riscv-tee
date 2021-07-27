@@ -16,9 +16,9 @@ uintptr_t va_top;
 #define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
 
 
-static inline void offset_register()
+static inline void page_map_register()
 {
-    SBI_CALL5(SBI_EXT_EBI, &EDRV_PA_START, &EDRV_VA_PA_OFFSET, &inv_map, EBI_OFFSET_REGISTER);
+    SBI_CALL5(SBI_EXT_EBI, pt_root, &inv_map, 0, EBI_MAP_REGISTER);
 }
 #define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
 
@@ -28,7 +28,6 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     EDRV_PA_START = mem_start;
     EDRV_VA_PA_OFFSET = EDRV_VA_START - EDRV_PA_START;
     va_top = EDRV_VA_START; // will increase by EMEM_SIZE after spa_init inside init_mem
-    offset_register(); // tell m mode where EDRV_VA_PA_OFFSET is
 
     printd("[S mode init_mem] id = %d\n", id);
     printd("[S mode init_mem] mem_start = 0x%lx\n", mem_start);
@@ -218,6 +217,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
 
+    page_map_register(); // tell m mode where page table and inverse mapping are
     va_top += EMEM_SIZE;
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));

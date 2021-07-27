@@ -186,17 +186,24 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	      uintptr_t attr)
 {
 	pte *pt;
+	char is_text = 0;
+
 	printd("[S mode map_page] va = 0x%lx pa = 0x%lx n = %d\n",va,pa,n_pages);
+	
+	if (va <= 0x100000)
+		is_text = 1;
+	if (is_text) {
+		insert_inverse_map(pa, va, n_pages);
+	}
+
 	// while (n_pages >= 512) {
 	// 	page_directory_insert(va, pa, 2, attr);
 	// 	va += EPAGE_SIZE * 512;
 	// 	pa += EPAGE_SIZE * 512;
 	// 	n_pages -= 512;
 	// }
-
 	while (n_pages >= 1) {
 		page_directory_insert(va, pa, 3, attr);
-
 		// if (n_pages == 1)
 		// 	test_va(va);
 		
@@ -227,7 +234,8 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 
 	while (n_pages >= 1) {
 		pa = spa_get_pa_zero(id);
-		if (pa == prev_pa + EPAGE_SIZE) {
+		if (pa == prev_pa + EPAGE_SIZE
+		&& SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
 			inverse_map_add_count(base_pa);
 		} else {
 			insert_inverse_map(pa, va, 1);
@@ -313,19 +321,6 @@ void inverse_map_add_count(uintptr_t pa)
 		}
 	}
 	printd("[s mode inverse_map_add_count] ERROR!!!!!!!!!\n");
-}
-
-inverse_map look_up_inverse_map(uintptr_t pa)
-{
-	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM; i++) {
-		if (inv_map[i].pa == pa)
-			return inv_map[i];
-	}
-
-	printd("[s mode look_up_inverse_map] not found\n");
-	inverse_map not_found;
-	not_found.pa = not_found.va = not_found.count = 0;
-	return not_found;
 }
 
 void dump_inverse_map()

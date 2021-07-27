@@ -22,6 +22,12 @@ inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];// __attribute__((section(".page_tabl
 #define DEBUG_CONDITION(cond) int debug = (cond) ? 1 : 0;
 #define DEBUG if (debug)
 
+// accessible addr to pa
+static uintptr_t acce_to_phys(uintptr_t acce_addr)
+{
+	return read_csr(satp) ? get_pa(acce_addr) : acce_addr;
+}
+
 /**
  * insert a va-pa pair to page table, maintained via a trie
  * @param t a trie to maintain used page directory in a pool, should be `static trie address_trie`
@@ -54,7 +60,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
 
 			tmp_pte = &page_directory_pool[p][l[i]];
-			tmp_pte->ppn = ((uintptr_t)&page_directory_pool[t->cnt][0] - va_pa_offset()) >> 12;
+			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_directory_pool[t->cnt][0]) >> 12;
 			tmp_pte->pte_v = 1;
 		}
 
@@ -227,9 +233,7 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 			insert_inverse_map(pa, va, 1);
 			base_pa = pa;
 		}
-
-		// printd("[alloc_page] alloc_page(nullptr,0x%lx,0x%lx,0);\n",va,n_pages);
-		// printd("[alloc_page] pa = 0x%lx\n", pa);
+		// printd("[S mode alloc_page] va: 0x%lx, pa: 0x%lx\n", va, pa);
 		page_directory_insert(va, pa, 3, attr);
 		prev_pa = pa;
 		va += EPAGE_SIZE;
@@ -264,7 +268,7 @@ void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 	int i = 0;
 
 	printd("[s mode insert_inverse_map] "
-		"pa: 0x%lx, va: 0x%lx, count: %d\n",
+		"pa: 0x%lx, va: 0x%lx\n",
 		pa, va, count);
 	for (; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) { // already exists; should update
@@ -274,7 +278,9 @@ void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 			if (count != inv_map[i].count) {
 				// something goes wrong
 				printd("[s mode insert_inverse_map] "
-					"ERROR: count does not match!\n");
+					"ERROR: count does not match! "
+					"original count: %d\n", inv_map[i].count);
+				while(1);
 				return;
 			}
 			inv_map[i].va = va;
@@ -299,6 +305,10 @@ void inverse_map_add_count(uintptr_t pa)
 	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) {
 			inv_map[i].count++;
+			if (inv_map[i].count % 100 == 0)
+				printd("[S mode inverse_map_add_count] "
+					"pa: 0x%lx, new count: %d\n",
+					pa, inv_map[i].count);
 			return;
 		}
 	}

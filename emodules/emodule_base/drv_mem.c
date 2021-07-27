@@ -10,8 +10,12 @@
 /* Each Eapp has their own program break */
 uintptr_t prog_brk;
 uintptr_t pt_root;
-// uintptr_t drv_start_va;
-// #define __pa(x) PTE2PA((uintptr_t) *get_pte((pte*)pt_root,((uintptr_t) x + EDRV_VA_PA_OFFSET),0))
+uintptr_t drv_start_va;
+uintptr_t va_top;
+
+#define __pa(x) get_pa(x + EDRV_VA_PA_OFFSET)
+
+
 static inline void offset_register()
 {
     SBI_CALL5(SBI_EXT_EBI, &EDRV_PA_START, &EDRV_VA_PA_OFFSET, &inv_map, EBI_OFFSET_REGISTER);
@@ -23,11 +27,13 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 {
     EDRV_PA_START = mem_start;
     EDRV_VA_PA_OFFSET = EDRV_VA_START - EDRV_PA_START;
+    va_top = EDRV_VA_START; // will increase by EMEM_SIZE after spa_init inside init_mem
     offset_register(); // tell m mode where EDRV_VA_PA_OFFSET is
 
     printd("[S mode init_mem] id = %d\n", id);
     printd("[S mode init_mem] mem_start = 0x%lx\n", mem_start);
     printd("[S mode init_mem] VA_PA_OFFSET = 0x%lx\n", EDRV_VA_PA_OFFSET);
+    printd("[S mode init_mem] va_top at 0x%lx\n", va_top);
     enclave_id = id;
 
     uintptr_t stvec = read_csr(stvec);
@@ -66,7 +72,6 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
     printd("[S mode init_mem] base_avail_start = 0x%x, base_avail_end = 0x%x\n", base_avail_start, base_avail_end);
     printd("[S mode init_mem] base_avail_size = %x\n", base_avail_size);
-    printd("[S mode init_mem] mem_start = 0x%x\n", mem_start);
 
     spa_init(base_avail_start, base_avail_size, DRV);
     printd("[S mode init_mem] hello1\n");
@@ -110,7 +115,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
         usr_avail_start + PAGE_DOWN(usr_avail_size), __pa(usr_avail_start));
 
     /* user stack R/W */
-    size_t n_user_stack_pages = (PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 5;
+    size_t n_user_stack_pages = (PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 1;
     printd("[S mode init_mem] user stack needs %d pages\n", n_user_stack_pages);
     uintptr_t usr_stack_start = EUSR_STACK_START;
     uintptr_t usr_stack_end = EUSR_STACK_END;
@@ -196,23 +201,24 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     /* base stack R/W */
     size_t n_base_stack_pages = (PAGE_UP(EDRV_STACK_SIZE)) >> EPAGE_SHIFT;
     printd("[S mode init_mem] drv stack uses %d pages\n", n_base_stack_pages);
-    uintptr_t drv_sp = EDRV_VA_START + EDRV_MEM_SIZE - EDRV_STACK_SIZE;
+    uintptr_t drv_sp = EDRV_STACK_TOP - EDRV_STACK_SIZE;
     alloc_page((pte*)pt_root, drv_sp, n_base_stack_pages, PTE_V | PTE_W | PTE_R,
         DRV);
     drv_sp += EDRV_STACK_SIZE;
 
-    printd("[S mode init_mem] sp: 0x%lx\npt_root: 0x%lx\n", drv_sp, pt_root);
+    printd("[S mode init_mem] sp: 0x%lx\n"
+            "pt_root: 0x%lx\n",
+            drv_sp, pt_root);
     printd("[S mode init_mem] usr sp: 0x%llx\n", usr_sp);
     uintptr_t satp = pt_root >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
-
-    printd("\033[1;33m[S mode init_mem] drv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
     /* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);
 	sstatus |= SSTATUS_SUM;
 	write_csr(sstatus, sstatus);
 
+    va_top += EMEM_SIZE;
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

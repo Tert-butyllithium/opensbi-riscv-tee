@@ -274,6 +274,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 					       regs, scratch);
 		msg = "illegal instruction handler failed";
 		sbi_printf("%s\n",msg);
+		while(1);
 		break;
 	case CAUSE_MISALIGNED_LOAD:
 		rc = sbi_misaligned_load_handler(hartid, mcause, mtval,
@@ -321,9 +322,6 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 			rc = sbi_trap_redirect(regs, &trap, scratch);
 		}
 		if ((pmp_test = pmp_exception_handle(csr_read(CSR_STVAL), hartid))!=NULL) {
-			static int cnt = 0;
-			if (cnt++ > 10)
-				while(1);
 			sbi_printf("\033[0;34m[sbi_trap_handler] addr in peri mepc: 0x%lx\n\033[0m", csr_read(CSR_MEPC));
 			pmp_allow_access(pmp_test);
 			regs->mepc = csr_read(CSR_MEPC);

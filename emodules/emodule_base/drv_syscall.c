@@ -38,7 +38,7 @@ int ebi_brk(uintptr_t addr) {
         return prog_brk;
     printd("####### brk start, prog_brk: 0x%lx########\n",prog_brk);
     printd("addr: 0x%lx\n",addr);
-    if (addr > PAGE_UP(prog_brk)) {
+    if (addr > PAGE_UP(prog_brk)) { // currently freeing does not work
 	printd("ebi_brk cp 1\n");
         n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
 	printd("ebi_brk cp 2 n_pages = 0x%lx\n", n_pages);

@@ -7,6 +7,7 @@
 #define EDRV_MEM_SHIFT	21
 #define EDRV_MEM_SIZE	(1UL << EDRV_MEM_SHIFT) 	// 0x20_0000
 #define EDRV_MEM_MASK	(~(-1UL << EDRV_MEM_SHIFT))
+#define EDRV_STACK_TOP 0xB0000000 //0xb000_0000
 #define EDRV_STACK_SIZE	0x8000
 #define EUSR_MEM_SIZE	(EMEM_SIZE - EDRV_MEM_SIZE)
 #define EUSR_STACK_SIZE	0x10000
@@ -20,4 +21,5 @@
 #ifndef __ASSEMBLER__
 extern uintptr_t pt_root;
 extern uintptr_t prog_brk;
+extern uintptr_t va_top;
 #endif

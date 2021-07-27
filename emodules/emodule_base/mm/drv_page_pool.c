@@ -9,6 +9,25 @@
 struct pg_list page_pools[NUM_POOL];
 static uintptr_t alloc_mem_from_m(struct pg_list* pool);
 
+// valid before mmu turned on
+static void dump_mem_pool(struct pg_list* pool)
+{
+    print_color("[S mode dump_mem_pool]start---------------------------");
+    printd("pool %p\n", pool);
+    uintptr_t cur = pool->head;
+    int cnt = 1;
+    while (cur && cnt <= 36) {
+        printd("0x%x ", cur);
+        if (!read_csr(satp))
+            cur -= EDRV_VA_PA_OFFSET;
+        cur = NEXT_PAGE(cur);
+        if (cnt++ % 18 == 0)
+            printd("\n");
+    }
+    printd("\n");
+    print_color("[S mode dump_mem_pool]end-----------------------------");
+}
+
 uintptr_t va_pa_offset() {
     uintptr_t satp = read_csr(satp);
     /* if paging already enabled, add offset */
@@ -21,32 +40,43 @@ uintptr_t va_pa_offset_no_mmu() {
     return EDRV_VA_PA_OFFSET - va_pa_offset();
 }
 
-// addr: pa
+static uintptr_t get_phys_addr(uintptr_t va)
+{
+    if (get_pa(va) == 0x88670000)
+        printd("[S mode get_phys_addr] va = 0x%lx, pa = 0x%lx\n",
+                va, get_pa(va));
+        
+    return read_csr(satp) ? get_pa(va) : (va - EDRV_VA_PA_OFFSET);
+}
+
+// this function will be used both before and after mmu gets turned on
 void __spa_put(uintptr_t pa, struct pg_list* pool) {
     uintptr_t prev;
-    uintptr_t offset = va_pa_offset();
-    uintptr_t va = pa + EDRV_VA_PA_OFFSET;
-    uintptr_t access_addr = pa + offset;
-
-    // printd("[S mode __spa_put] pa = 0x%lx, va = 0x%lx, \n"
-    //         "offset = 0x%lx, access_addr = 0x%lx\n",
-    //         pa, va, offset, access_addr);
+    uintptr_t section_offset = pa - SECTION_DOWN(pa);
+    uintptr_t va = va_top + section_offset;
+    uintptr_t accessible_va = va - va_pa_offset_no_mmu();
 
     if(!LIST_EMPTY(pool)) {
         prev = pool -> tail - va_pa_offset_no_mmu();
         NEXT_PAGE(prev) = va;
     } else {
+        printd("[S mode __spa_put] list empty, head set to 0x%lx, va_top: 0x%lx\n",
+                    va, va_top);
         pool->head = va;
     }
 
-    NEXT_PAGE(access_addr) = 0;
+    NEXT_PAGE(accessible_va) = 0;
     pool->tail = va;
     pool->count++;
 }
 
+#define DEBUG_CONDITION(cond) int debug = (cond) ? 1 : 0
+#define DEBUG if (debug)
+
 // returns virtual addr of the page, -1 on failure
 uintptr_t __spa_get(struct pg_list* pool) {
-    uintptr_t page, ret;
+DEBUG_CONDITION(pool->count > 1500 && pool->count < 1050);
+    uintptr_t page, ret, next;
     if (LIST_EMPTY(pool)) {
         printd("[S mode __spa_get] pool tail = 0x%lx\n", pool->tail);
         ret = alloc_mem_from_m(pool);
@@ -55,50 +85,57 @@ uintptr_t __spa_get(struct pg_list* pool) {
             return -1;
         }
     }
+DEBUG    printd("[S mode __spa_get] pool count: %d\n", pool->count);
     page = pool -> head - va_pa_offset_no_mmu();
-    uintptr_t next = NEXT_PAGE(page);
+    ret = pool -> head;
+    next = NEXT_PAGE(page);
+DEBUG    printd("[S mode __spa_get] page: 0x%lx, ret: 0x%lx, next: 0x%lx\n", 
+                    page, ret, next);
+    
     pool->head = next;
     pool->count--;
 
-    return page;
+    return ret;
 }
 
-// should be invoked before mmu gets turned on
+// should be invoked before mmu gets turned on (only once)
 void spa_init(uintptr_t base, size_t size, char id) {
+    printd("[S mode spa_init] initializing page pool %d\n", (int)id);
+
     uintptr_t cur;
-    struct pg_list* pool = page_pools+id;
+    struct pg_list* pool = page_pools + id;
     LIST_INIT(pool);
     for(cur = base; cur < base + size; cur += EPAGE_SIZE) {
         __spa_put(cur, pool);
     }
-    printd("[S mode spa_init] pool init size: 0x%x\n", pool->count);
+
+    dump_mem_pool(pool);
 }
 void spa_put(uintptr_t addr, char id) {
     __spa_put(addr, page_pools + id);
 }
-// uintptr_t spa_get(char id) {
-    // uintptr_t page = __spa_get(page_pools + id);
-    // return page;
-// }
-// uintptr_t spa_get_zero(char id) {
-//     uintptr_t page = __spa_get(page_pools + id);
-//     my_memset((char*)page, 0, EPAGE_SIZE);
-//     return page;
-// }
 
 uintptr_t spa_get_pa(char id) {
     uintptr_t page = __spa_get(page_pools + id);
     if (page == -1)
         return -1;
-    return page - va_pa_offset();
+    return get_phys_addr(page);
 }
 
 uintptr_t spa_get_pa_zero(char id) {
     uintptr_t page = __spa_get(page_pools + id);
+    uintptr_t ret, acce = page - va_pa_offset_no_mmu();
     if (page == -1)
         return -1;
-    my_memset((char*)page, 0, EPAGE_SIZE);
-    return page - va_pa_offset();
+    my_memset((char*)acce, 0, EPAGE_SIZE);
+    ret = get_phys_addr(page);
+    if (ret == 0x88670000) {
+        dump_mem_pool(page_pools + id);
+        printd("[S mode spa_get_pa_zero] id = %d, page pa = 0x88670000\n", (int)id);
+        struct pg_list* pool = page_pools+id;
+        printd("[S mode spa_get_pa_zero] pool count: %d\n", pool->count);
+    }
+    return ret;
 }
 
 uintptr_t spa_avail(char id) {
@@ -124,7 +161,7 @@ static uintptr_t alloc_mem_from_m(struct pg_list* pool)
 
 
     // linearly map the allocated memory by va_pa_offset
-    map_page(NULL, addr + EDRV_VA_PA_OFFSET, addr,
+    map_page(NULL, va_top, addr,
                 size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
 
     // test
@@ -140,6 +177,8 @@ static uintptr_t alloc_mem_from_m(struct pg_list* pool)
 
     pool_size = pool->count;
     printd("[S mode alloc_mem_from_m] pool size is now: 0x%x\n", pool_size);
+
+    va_top += EMEM_SIZE;
 
     return addr;
 }

@@ -42,10 +42,6 @@ uintptr_t va_pa_offset_no_mmu() {
 
 static uintptr_t get_phys_addr(uintptr_t va)
 {
-    if (get_pa(va) == 0x88670000)
-        printd("[S mode get_phys_addr] va = 0x%lx, pa = 0x%lx\n",
-                va, get_pa(va));
-        
     return read_csr(satp) ? get_pa(va) : (va - EDRV_VA_PA_OFFSET);
 }
 
@@ -70,12 +66,9 @@ void __spa_put(uintptr_t pa, struct pg_list* pool) {
     pool->count++;
 }
 
-#define DEBUG_CONDITION(cond) int debug = (cond) ? 1 : 0
-#define DEBUG if (debug)
 
 // returns virtual addr of the page, -1 on failure
 uintptr_t __spa_get(struct pg_list* pool) {
-DEBUG_CONDITION(pool->count > 1500 && pool->count < 1050);
     uintptr_t page, ret, next;
     if (LIST_EMPTY(pool)) {
         printd("[S mode __spa_get] pool tail = 0x%lx\n", pool->tail);
@@ -85,12 +78,9 @@ DEBUG_CONDITION(pool->count > 1500 && pool->count < 1050);
             return -1;
         }
     }
-DEBUG    printd("[S mode __spa_get] pool count: %d\n", pool->count);
     page = pool -> head - va_pa_offset_no_mmu();
     ret = pool -> head;
     next = NEXT_PAGE(page);
-DEBUG    printd("[S mode __spa_get] page: 0x%lx, ret: 0x%lx, next: 0x%lx\n", 
-                    page, ret, next);
     
     pool->head = next;
     pool->count--;
@@ -129,12 +119,6 @@ uintptr_t spa_get_pa_zero(char id) {
         return -1;
     my_memset((char*)acce, 0, EPAGE_SIZE);
     ret = get_phys_addr(page);
-    if (ret == 0x88670000) {
-        dump_mem_pool(page_pools + id);
-        printd("[S mode spa_get_pa_zero] id = %d, page pa = 0x88670000\n", (int)id);
-        struct pg_list* pool = page_pools+id;
-        printd("[S mode spa_get_pa_zero] pool count: %d\n", pool->count);
-    }
     return ret;
 }
 

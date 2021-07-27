@@ -4,6 +4,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_ecall_ebi_enclave.h>
 #include <sbi/riscv_asm.h>
+#include <sbi/sbi_ecall_ebi_dma.h>
 
 #define for_each_section_in_pool(pool, section, i) \
 	for (i = 0, section = &pool[i]; \
@@ -87,11 +88,11 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 	section_ownership_dump();
 
 
-	// -----------------------------------------------------------------------
-	uintptr_t base_sfn = SECTION_DOWN(context->pt_root_addr) >> SECTION_SHIFT;
-	sbi_printf("[M mode alloc_section_for_enclave] base_sfn = 0x%lx\n", base_sfn);
-	if (base_sfn)
-		section_migration(base_sfn, base_sfn + 3);
+	// -------------------------- migration test -----------------------------
+	// uintptr_t base_sfn = SECTION_DOWN(context->pt_root_addr) >> SECTION_SHIFT;
+	// sbi_printf("[M mode alloc_section_for_enclave] base_sfn = 0x%lx\n", base_sfn);
+	// if (base_sfn)
+	// 	section_migration(base_sfn, base_sfn + 3);
 
 	// -----------------------------------------------------------------------
 
@@ -190,7 +191,7 @@ void section_ownership_dump()
 {
 	int i, j;
 	struct section *sec;
-	const int line_len = 5; // complex version
+	const int line_len = 4; // complex version
 	// const int line_len = 32; // brief version
 
 	// complex version
@@ -284,11 +285,13 @@ static void section_copy(uintptr_t src_sfn, uintptr_t dst_sfn)
 	sbi_printf("[M mode section copy] copying from 0x%lx to 0x%lx\n",
 			src_pa, dst_pa);
 
-	sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
+	// sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
+	dma_copy(src_pa, dst_pa, SECTION_SIZE);
 	// mem_dump(src_pa, 256);
 	// mem_dump(dst_pa, 256);
 }
 
+// update non-leaf pte recursively
 static void update_tree_pte(uintptr_t root, uintptr_t delta_pa)
 {
 	pte *entry = (pte *)root;
@@ -381,14 +384,16 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	pt_root_addr 	= context->pt_root_addr;
 	inv_map_addr 	= context->inverse_map_addr;
 	offset_addr 	= context->offset_addr;
+
 	// 1. judge whether the section contains a base module
 	if (src_sfn == SECTION_DOWN(pt_root_addr) >> SECTION_SHIFT) {
 		is_base_module = 1;
 		sbi_printf("[M mode section_migration] is base module\n");
 	}
 
-	// 2. For base module, calculate the new pa of pt_root and
-	//    inv_map. Update the enclave context accordingly
+	// 2. For base module, calculate the new pa of pt_root,
+	//    inv_map, and va_pa_offset.
+	//    Update the enclave context accordingly
 	if (is_base_module) {
 		context->pt_root_addr 	  += delta_addr;
 		context->inverse_map_addr += delta_addr;

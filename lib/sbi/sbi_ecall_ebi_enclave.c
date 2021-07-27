@@ -187,6 +187,10 @@ uintptr_t enclave_mem_free(enclave_context *context)
 {
 	int eid = context->id;
 
+	context->offset_addr		= 0;
+	context->pt_root_addr		= 0;
+	context->inverse_map_addr	= 0;
+
 	sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
 	free_section_for_enclave(eid);
 
@@ -234,7 +238,7 @@ void pmp_switch(enclave_context *context)
 	// 	     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
 }
 
-void pmp_allow_access(peri_addr_t* peri){
+void pmp_allow_access(peri_addr_t* peri) {
 	// __attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
 	// cfg = csr_read(CSR_PMPCFG0);
 	// p2 = peri->reg_pa_start >> PMP_SHIFT;

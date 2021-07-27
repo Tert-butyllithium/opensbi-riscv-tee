@@ -326,8 +326,9 @@ void init_csr_context(enclave_context *context)
 	context->ns_satp     = 0;
 	context->ns_sie	     = 0;
 	context->ns_stvec    = 0;
-	context->pt_root     = 0;
+	context->pt_root_addr	  = 0;
 	context->inverse_map_addr = 0;
+	context->offset_addr	  = 0;
 }
 
 /* Machine mode does not contains the necessary mapping, need to switch back to

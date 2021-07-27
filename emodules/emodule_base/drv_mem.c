@@ -18,14 +18,14 @@ uintptr_t va_top;
 
 static inline void page_map_register()
 {
-    SBI_CALL5(SBI_EXT_EBI, pt_root, &inv_map, 0, EBI_MAP_REGISTER);
+    SBI_CALL5(SBI_EXT_EBI, &pt_root, &inv_map, &EDRV_VA_PA_OFFSET, EBI_MAP_REGISTER);
 }
 
 /* Initialize memory for driver, including stack, heap, page table */
 void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size, drv_addr_t drv_list[MAX_DRV], uintptr_t argc, uintptr_t argv)
 {
-    EDRV_PA_START = mem_start;
-    EDRV_VA_PA_OFFSET = EDRV_VA_START - EDRV_PA_START;
+    EDRV_PA_START = mem_start; // used only once (in the following line)
+    EDRV_VA_PA_OFFSET = EDRV_VA_START - EDRV_PA_START; // should be updated when base is migrated
     va_top = EDRV_VA_START; // will increase by EMEM_SIZE after spa_init inside init_mem
 
     printd("[S mode init_mem] id = %d\n", id);

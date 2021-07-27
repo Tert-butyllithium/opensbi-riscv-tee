@@ -178,8 +178,9 @@ typedef struct {
     uint8_t peri_cnt;
     char status;
 
-    uintptr_t pt_root;
+    uintptr_t pt_root_addr;
     uintptr_t inverse_map_addr; // &inv_map (phys addr)
+    uintptr_t offset_addr;
 
     pmp_region pmp_reg[PMP_REGION_MAX];
 } enclave_context;

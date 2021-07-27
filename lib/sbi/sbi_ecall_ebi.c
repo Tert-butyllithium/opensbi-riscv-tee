@@ -73,16 +73,19 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
     case SBI_EXT_EBI_MAP_REGISTER:
         sbi_printf("[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MAP_REGISTER\n");
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
-                    "pt_root = 0x%lx\n", regs->a0);
+                    "&pt_root = 0x%lx\n", regs->a0);
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
                     "&inv_map = 0x%lx\n", regs->a1);
-        if (!(regs->a0 && regs->a1)) {
+        sbi_printf("[M mode sbi_ecall_ebi_handler] "
+                    "&EDRV_VA_PA_OFFSET = 0x%lx\n", regs->a2);
+        if (!(regs->a0 && regs->a1 && regs->a2)) {
             sbi_printf("[M mode sbi_ecall_ebi_handler] invalid ecall, check input\n");
             return ret;
         }
 
-        context->pt_root = regs->a0;
+        context->pt_root_addr = regs->a0;
         context->inverse_map_addr = regs->a1;
+        context->offset_addr = regs->a2;
         return ret;
     }
 

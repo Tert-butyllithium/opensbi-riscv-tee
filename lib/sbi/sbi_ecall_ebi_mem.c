@@ -31,11 +31,32 @@ static inverse_map* look_up_inverse_map(inverse_map* inv_map, uintptr_t pa);
 __unused static void dump_inverse_map();
 static void inline mem_dump(uintptr_t addr, uintptr_t len);
 static inline void flush_tlb();
+void flush_dcache_range(unsigned long start, unsigned long end);
+void invalidate_dcache_range(unsigned long start, unsigned long end);
 
 
 static inline void flush_tlb()
 {
 	asm volatile("sfence.vma");
+}
+
+#define L1_CACHE_BYTES 64
+void flush_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile(".long 0x0295000b");	/*dcache.cpa a0*/
+	asm volatile(".long 0x01b0000b");		/*sync.is*/
+}
+
+void invalidate_dcache_range(unsigned long start, unsigned long end)
+{
+	register unsigned long i asm("a0") = start & ~(L1_CACHE_BYTES - 1);
+
+	for (; i < end; i += L1_CACHE_BYTES)
+		asm volatile ("dcache.ipa a0");
+
+	asm volatile (".long 0x01b0000b");
 }
 
 
@@ -441,6 +462,8 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 	// 6. flush tlb, cache
 	flush_tlb();
+	flush_dcache_range(dst_pa, dst_pa + SECTION_SIZE);
+	invalidate_dcache_range(src_pa, src_pa + SECTION_SIZE);
 	
 
 	return dst_sfn;

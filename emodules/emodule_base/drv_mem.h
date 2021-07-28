@@ -3,7 +3,8 @@
 // /* Based on 64 bits Sv39 Page */
 #define SATP_MODE_SHIFT      60
 
-#define EMEM_SIZE	0x800000
+#define SECTION_SHIFT	23			// should be less than or equal to 26
+#define SECTION_SIZE	(1UL << SECTION_SHIFT)	// 0x80_0000
 #define EDRV_MEM_SHIFT	21
 #define EDRV_MEM_SIZE	(1UL << EDRV_MEM_SHIFT) 	// 0x20_0000
 #define EDRV_MEM_MASK	(~(-1UL << EDRV_MEM_SHIFT))

@@ -16,36 +16,38 @@ drv_addr_t *drv_addr_list;
 
 uintptr_t init_usr_stack(uintptr_t usr_sp)
 {
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 12);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 11);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 18);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 13);
-	PUSH(usr_sp, 0xdeaddead);
-	PUSH(usr_sp, 25);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 23);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 31);
-	PUSH(usr_sp, EPAGE_SIZE);
-	PUSH(usr_sp, 6);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 32);
-	PUSH(usr_sp, 0x112d);
-	PUSH(usr_sp, 16);
+	for (int i = 0; i < 100; i++)
+		PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 12);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 11);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 18);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 13);
+// 	PUSH(usr_sp, 0xdeaddead);
+// 	PUSH(usr_sp, 25);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 23);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 31);
+// 	PUSH(usr_sp, EPAGE_SIZE);
+// 	PUSH(usr_sp, 6);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 32);
+// 	PUSH(usr_sp, 0x112d);
+// 	PUSH(usr_sp, 16);
 
-	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 0);
 
-	PUSH(usr_sp, 0x16);
-	PUSH(usr_sp, 0x39);
-	PUSH(usr_sp, 0x0);
+// 	PUSH(usr_sp, 0x16);
+// 	PUSH(usr_sp, 0x39);
+// 	PUSH(usr_sp, 0x0);
 
-	PUSH(usr_sp, 0x3);
+// 	PUSH(usr_sp, 0x3);
 	return usr_sp;
 }
 

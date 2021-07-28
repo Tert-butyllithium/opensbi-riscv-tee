@@ -414,9 +414,13 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	if (avail_id == EBI_ERROR)
 		return EBI_ERROR;
 	/* LOADED enclave, loaded not running */
-	context			  = &enclaves[avail_id];
-	context->status = ENC_LOAD;
-	context->id = avail_id;
+	context			= &enclaves[avail_id];
+	context->status 	= ENC_LOAD;
+	context->id		= avail_id;
+	context->pa		= 0;
+	context->pt_root_addr	= 0;
+	context->offset_addr	= 0;
+	context->inverse_map_addr = 0;
 	
 	sbi_printf("[create_enclave] log2: enclave id: %lx\n", context->id);
 

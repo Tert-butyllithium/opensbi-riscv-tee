@@ -92,19 +92,19 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 	// uintptr_t base_sfn = SECTION_DOWN(context->pt_root_addr) >> SECTION_SHIFT;
 	// sbi_printf("[M mode alloc_section_for_enclave] base_sfn = 0x%lx\n", base_sfn);
 	// if (base_sfn)
-	// 	section_migration(base_sfn, base_sfn + 3);
+	// 	section_migration(base_sfn, base_sfn + 6);
 
 	// -----------------------------------------------------------------------
 
 	
-	for (int i = PMP_REGION_MAX - 1; i >= 0; i--) {
-		if (context->pmp_reg[i].used)
-			continue;
-		context->pmp_reg[i].pmp_start = (sec->sfn << SECTION_SHIFT);
-		context->pmp_reg[i].pmp_size = SECTION_SIZE;
-		context->pmp_reg[i].used = 1;
-		break;
-	}
+	// for (int i = PMP_REGION_MAX - 1; i >= 0; i--) {
+	// 	if (context->pmp_reg[i].used)
+	// 		continue;
+	// 	context->pmp_reg[i].pmp_start = (sec->sfn << SECTION_SHIFT);
+	// 	context->pmp_reg[i].pmp_size = SECTION_SIZE;
+	// 	context->pmp_reg[i].used = 1;
+	// 	break;
+	// }
 
 	return (sec->sfn) << SECTION_SHIFT;
 }
@@ -411,7 +411,7 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	dst_sec->owner = eid;
 	dst_sec->va = linear_start_va;
 
-	// 3.5 update pt_root value, EDRV_VA_PA_OFFSET value
+	// 3.5 update pt_root value, ENC_VA_PA_OFFSET value
 	*(uintptr_t *)pt_root_addr += delta_addr; // value of pt_root update
 	pt_root = *(uintptr_t *)pt_root_addr;
 	satp = pt_root >> EPAGE_SHIFT;

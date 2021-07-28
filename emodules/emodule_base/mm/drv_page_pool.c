@@ -19,7 +19,7 @@ static void dump_mem_pool(struct pg_list* pool)
     while (cur && cnt <= 36) {
         printd("0x%x ", cur);
         if (!read_csr(satp))
-            cur -= EDRV_VA_PA_OFFSET;
+            cur -= ENC_VA_PA_OFFSET;
         cur = NEXT_PAGE(cur);
         if (cnt++ % 18 == 0)
             printd("\n");
@@ -32,17 +32,17 @@ uintptr_t va_pa_offset() {
     uintptr_t satp = read_csr(satp);
     /* if paging already enabled, add offset */
     if (satp & ((uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT))
-        return EDRV_VA_PA_OFFSET;
+        return ENC_VA_PA_OFFSET;
     return 0;
 }
 
 uintptr_t va_pa_offset_no_mmu() {
-    return EDRV_VA_PA_OFFSET - va_pa_offset();
+    return ENC_VA_PA_OFFSET - va_pa_offset();
 }
 
 static uintptr_t get_phys_addr(uintptr_t va)
 {
-    return read_csr(satp) ? get_pa(va) : (va - EDRV_VA_PA_OFFSET);
+    return read_csr(satp) ? get_pa(va) : (va - ENC_VA_PA_OFFSET);
 }
 
 // this function will be used both before and after mmu gets turned on

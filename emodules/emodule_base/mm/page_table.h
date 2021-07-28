@@ -3,7 +3,7 @@
 #include "../drv_util.h"
 #include "../drv_mem.h"
 
-// #define EDRV_PA_START    0x40000000
+// #define ENC_PA_START    0x40000000
 #define EDRV_VA_START    0xC0000000
 #define EDRV_DRV_START   0xD0000000
 
@@ -51,8 +51,8 @@ typedef struct trie {
 } trie;
 typedef pte page_directory[512];
 
-extern uintptr_t EDRV_PA_START;
-extern uintptr_t EDRV_VA_PA_OFFSET;
+extern uintptr_t ENC_PA_START;
+extern uintptr_t ENC_VA_PA_OFFSET;
 extern inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];
 
 void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages, uintptr_t attr);

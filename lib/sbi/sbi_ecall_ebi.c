@@ -77,7 +77,7 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
                     "&inv_map = 0x%lx\n", regs->a1);
         sbi_printf("[M mode sbi_ecall_ebi_handler] "
-                    "&EDRV_VA_PA_OFFSET = 0x%lx\n", regs->a2);
+                    "&ENC_VA_PA_OFFSET = 0x%lx\n", regs->a2);
         if (!(regs->a0 && regs->a1 && regs->a2)) {
             sbi_printf("[M mode sbi_ecall_ebi_handler] invalid ecall, check input\n");
             return ret;

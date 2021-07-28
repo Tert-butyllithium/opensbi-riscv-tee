@@ -14,17 +14,18 @@
 static page_directory page_directory_pool[PAGE_DIR_POOL] __attribute__((section(".page_table")));
 static trie address_trie __attribute__((section(".page_table_trie")));
 
-uintptr_t EDRV_PA_START;// __attribute__((section(".page_table_trie")));
-uintptr_t EDRV_VA_PA_OFFSET;// __attribute__((section(".page_table_trie")));
+uintptr_t ENC_PA_START;// __attribute__((section(".page_table_trie")));
+uintptr_t ENC_VA_PA_OFFSET;// __attribute__((section(".page_table_trie")));
 inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];// __attribute__((section(".page_table_trie")));
 
 #define DEBUG_CONDITION(cond) int debug = (cond) ? 1 : 0;
 #define DEBUG if (debug)
 
 // accessible addr to pa
-static uintptr_t acce_to_phys(uintptr_t acce_addr)
+static inline uintptr_t acce_to_phys(uintptr_t acce_addr)
 {
-	return read_csr(satp) ? get_pa(acce_addr) : acce_addr;
+	// return read_csr(satp) ? get_pa(acce_addr) : acce_addr;
+	return read_csr(satp) ? (acce_addr - ENC_VA_PA_OFFSET) : acce_addr;
 }
 
 /**
@@ -83,12 +84,6 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	}
 	if(attr & PTE_X){
 		tmp_pte->pte_x = 1;
-	}
-	if (read_csr(satp)) {
-		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
-		invalidate_dcache_range(pt_root, pt_root + 0x62000); // invalidation works, why?
-		// flush_dcache_range(pt_root, pt_root + 0x62000);   flush does not work, why?
-		flush_tlb();
 	}
 
 	return *((uintptr_t *)tmp_pte);
@@ -153,7 +148,7 @@ uintptr_t get_pa(uintptr_t va)
 	int i = 0;
 	while (1) {
 		// printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n",
-			// i, root, EDRV_VA_PA_OFFSET);
+			// i, root, ENC_VA_PA_OFFSET);
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			printd("ERROR: va:0x%lx is not valid!!!\n", va);
@@ -191,9 +186,7 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	pte *pt;
 	char is_text = 0;
 
-	printd("[S mode map_page] va = 0x%lx pa = 0x%lx n = %d\n",va,pa,n_pages);
-	
-	if (va <= 0x100000)
+	if (va <= 0x100000) // to be modified: used by load_elf
 		is_text = 1;
 	if (is_text) {
 		insert_inverse_map(pa, va, n_pages);
@@ -215,6 +208,12 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 		n_pages--;
 	}
 
+	if (read_csr(satp)) {
+		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
+		invalidate_dcache_range(pt_root, pt_root + 0x62000); // invalidation works, why?
+		// flush_dcache_range(pt_root, pt_root + 0x62000);   flush does not work, why?
+		flush_tlb();
+	}
 }
 
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
@@ -236,6 +235,8 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 	uintptr_t pa, prev_pa = 0, base_pa = 0;
 	inverse_map *inv_map_entry;
 
+	printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
+			va, n_pages);
 	while (n_pages >= 1) {
 		pa = spa_get_pa_zero(id);
 		if (pa == prev_pa + EPAGE_SIZE
@@ -259,6 +260,13 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 	}
 
 	dump_inverse_map();
+
+	if (read_csr(satp)) {
+		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
+		invalidate_dcache_range(pt_root, pt_root + 0x62000); // invalidation works, why?
+		// flush_dcache_range(pt_root, pt_root + 0x62000);   flush does not work, why?
+		flush_tlb();
+	}
 
 	return pa;
 }

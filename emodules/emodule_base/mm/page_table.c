@@ -102,6 +102,14 @@ uintptr_t get_page_table_root()
 	return (uintptr_t)&page_directory_pool[0][0];
 }
 
+static inline void flush_page_table_cache_and_tlb()
+{
+	uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
+	invalidate_dcache_range(pt_root,
+				pt_root + PAGE_DIR_POOL * EPAGE_SIZE); // invalidation works, why?
+	flush_tlb();
+}
+
 void print_pte(uintptr_t va){
 		uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
@@ -209,10 +217,7 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	}
 
 	if (read_csr(satp)) {
-		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
-		invalidate_dcache_range(pt_root, pt_root + 0x62000); // invalidation works, why?
-		// flush_dcache_range(pt_root, pt_root + 0x62000);   flush does not work, why?
-		flush_tlb();
+		flush_page_table_cache_and_tlb();
 	}
 }
 
@@ -262,10 +267,7 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 	dump_inverse_map();
 
 	if (read_csr(satp)) {
-		uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
-		invalidate_dcache_range(pt_root, pt_root + 0x62000); // invalidation works, why?
-		// flush_dcache_range(pt_root, pt_root + 0x62000);   flush does not work, why?
-		flush_tlb();
+		flush_page_table_cache_and_tlb();
 	}
 
 	return pa;

@@ -12,7 +12,7 @@
 #endif
 
 // static page_directory page_directory_pool[PAGE_DIR_POOL];
-static page_directory *page_directory_pool;
+static uintptr_t page_directory_pool; // always store pa in this pointer
 static trie address_trie;
 
 uintptr_t ENC_PA_START;
@@ -43,6 +43,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 				    const int attr)
 {
 	uint32_t p = 0, i = 0;
+	page_directory *page_table = (page_directory *)get_page_table_root();
 	/*
      * [L2, L1, L0] PPN for each level, used fot trie to get offset of 
      * page_directory_pool
@@ -60,15 +61,15 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 			t->next[p][l[i]] = ++t->cnt;
 			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
 
-			tmp_pte = &page_directory_pool[p][l[i]];
-			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_directory_pool[t->cnt][0]) >> 12;
+			tmp_pte = &page_table[p][l[i]];
+			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_table[t->cnt][0]) >> 12;
 			tmp_pte->pte_v = 1;
 		}
 
 		p = t->next[p][l[i]];
 	}
 	// set items for the leaf page table entry
-	tmp_pte	     = &page_directory_pool[p][l[len - 1]];
+	tmp_pte	     = &page_table[p][l[len - 1]];
 	tmp_pte->ppn = pa >> 12;
 	if (len == 2) {
 		tmp_pte->ppn = (tmp_pte->ppn | MASK_OFFSET) ^ MASK_OFFSET;
@@ -98,17 +99,17 @@ static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
 	return p;
 }
 
-void set_page_table_root(uintptr_t pt_root)
+void set_page_table_root(uintptr_t pt_root) // should only be invoked before mmu enabled
 {
-	page_directory_pool = (page_directory *)pt_root;
+	page_directory_pool = pt_root;
 }
 
-uintptr_t get_page_table_root()
+inline uintptr_t get_page_table_root() // returns accessible addr
 {
-	return (uintptr_t)page_directory_pool;
+	return page_directory_pool + va_pa_offset();
 }
 
-uintptr_t get_page_table_root_pointer_addr()
+uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mmu enabled
 {
 	return (uintptr_t)&page_directory_pool;
 }
@@ -288,9 +289,10 @@ void all_zero()
 {
 	int i, j;
 	pte *tmp_pte;
+	page_directory *page_table = (page_directory *)get_page_table_root();
 	for (i = 0; i < 64; i++) {
 		for (j = 0; j < 512; j++) {
-			tmp_pte = &page_directory_pool[i][j];
+			tmp_pte = &page_table[i][j];
 			if (*((uintptr_t *)tmp_pte)) {
 				printd("!!!!!!! %d:%d not zero\n", i, j);
 			}

@@ -381,6 +381,12 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 		return 0;
 	}
 
+	if (dst_sec->owner >= 0) {
+		sbi_printf("[M mode section_migration] "
+				"dst section already occupied\n");
+		return 0;
+	}
+
 	pt_root_addr 	= context->pt_root_addr;
 	inv_map_addr 	= context->inverse_map_addr;
 	offset_addr 	= context->offset_addr;

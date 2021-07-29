@@ -9,7 +9,6 @@
 #include "drv_util.h"
 /* Each Eapp has their own program break */
 uintptr_t prog_brk;
-// uintptr_t pt_root;
 uintptr_t drv_start_va;
 uintptr_t va_top;
 
@@ -18,7 +17,8 @@ uintptr_t va_top;
 
 static inline void page_map_register()
 {
-    SBI_CALL5(SBI_EXT_EBI, 0, &inv_map, &ENC_VA_PA_OFFSET, EBI_MAP_REGISTER);
+    SBI_CALL5(SBI_EXT_EBI, get_page_table_root_pointer_addr(), 
+                &inv_map, &ENC_VA_PA_OFFSET, EBI_MAP_REGISTER);
 }
 
 /* Initialize memory for driver, including stack, heap, page table */
@@ -63,9 +63,14 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 
     drv_addr_list = (drv_addr_t*)((uintptr_t)drv_list);
     drv_addr_list = (void*)(ENC_VA_PA_OFFSET + (void*) drv_addr_list);
-    
     printd("\033[1;33m[S mode init_mem] drv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
-    uintptr_t base_avail_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
+
+    uintptr_t page_table_start =  PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
+    uintptr_t page_table_size = PAGE_UP(PAGE_DIR_POOL * EPAGE_SIZE);
+    uintptr_t page_table_end = page_table_start + page_table_size;
+    set_page_table_root(page_table_start);
+    
+    uintptr_t base_avail_start = page_table_end;
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
     printd("[S mode init_mem] base_avail_start = 0x%x, base_avail_end = 0x%x\n", base_avail_start, base_avail_end);
@@ -87,8 +92,6 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     printd("[S mode init_mem] user spa initialize done\n");
 
     all_zero();
-    // pt_root = spa_get_zero(DRV);
-    // pt_root = get_page_table_root();
     printd("\033[1;33m[S mode init_mem] root: 0x%x\n\033[0m", get_page_table_root());
     /* Load ELF running inside enclave */
     uintptr_t usr_pc = elf_load(0, mem_start, USR, &prog_brk);
@@ -134,13 +137,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     printd("[S mode init_mem] .text: 0x%x - 0x%x -> 0x%x\n", text_start, text_end, __pa(text_start));
 
     /* page_table */
-    extern char _page_table_start,  _page_table_end;
-    uintptr_t page_table_start = (uintptr_t)&_page_table_start;
-    uintptr_t page_table_end = (uintptr_t)&_page_table_end;
-    uintptr_t page_table_size = page_table_end - page_table_start;
-    size_t n_page_table_pages = (PAGE_UP(page_table_size)) >> EPAGE_SHIFT;
     map_page(NULL, ENC_VA_PA_OFFSET + page_table_start, page_table_start,
-        n_page_table_pages, PTE_V | PTE_W | PTE_R);
+        page_table_size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] page_table: 0x%x - 0x%x -> 0x%x\n", page_table_start, page_table_end, __pa(page_table_start));
 
     /* base driver .rodata section */
@@ -204,7 +202,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     drv_sp += EDRV_STACK_SIZE;
 
     printd("[S mode init_mem] sp: 0x%lx\n"
-            "pt_root: 0x%lx\n",
+            "page table root: 0x%lx\n",
             drv_sp, get_page_table_root());
     printd("[S mode init_mem] usr sp: 0x%llx\n", usr_sp);
     uintptr_t satp = get_page_table_root() >> EPAGE_SHIFT;

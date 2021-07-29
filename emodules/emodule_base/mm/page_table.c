@@ -11,7 +11,8 @@
 #define printd printf
 #endif
 
-static page_directory page_directory_pool[PAGE_DIR_POOL];
+// static page_directory page_directory_pool[PAGE_DIR_POOL];
+static page_directory *page_directory_pool;
 static trie address_trie;
 
 uintptr_t ENC_PA_START;
@@ -97,9 +98,19 @@ static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
 	return p;
 }
 
+void set_page_table_root(uintptr_t pt_root)
+{
+	page_directory_pool = (page_directory *)pt_root;
+}
+
 uintptr_t get_page_table_root()
 {
-	return (uintptr_t)&page_directory_pool[0][0];
+	return (uintptr_t)page_directory_pool;
+}
+
+uintptr_t get_page_table_root_pointer_addr()
+{
+	return (uintptr_t)&page_directory_pool;
 }
 
 static inline void flush_page_table_cache_and_tlb()

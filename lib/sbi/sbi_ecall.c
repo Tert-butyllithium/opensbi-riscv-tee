@@ -97,6 +97,7 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		regs->a5 = (uintptr_t)regs;
 		sbi_printf("[sbi_ecall_handler] count = %d, a5 is set to 0x%lx, a6 == %lu, a7 == SBI_EXT_EBI\n",
 			count_ebi, regs->a5, func_id);
+		sbi_printf("[sbi_ecall_handler] mepc = 0x%lx\n", regs->mepc);
 	}
 
 	// The ecall is a syscall if it is from U-mode but a7 is not SBI_EXT_EBI

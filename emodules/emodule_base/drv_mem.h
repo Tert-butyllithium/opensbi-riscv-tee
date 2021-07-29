@@ -20,7 +20,7 @@
 
 #include "mm/page_table.h"
 #ifndef __ASSEMBLER__
-extern uintptr_t pt_root;
+// extern uintptr_t pt_root;
 extern uintptr_t prog_brk;
 extern uintptr_t va_top;
 #endif

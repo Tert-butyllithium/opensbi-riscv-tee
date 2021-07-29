@@ -221,7 +221,7 @@ uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 	static uintptr_t drv_addr_alloc = 0;
 	printd("current root address: %p\n",get_page_table_root());
 	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
-	map_page(root,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
+	map_page(NULL,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
 	uintptr_t cur_addr =  EDRV_DRV_START;
 	drv_addr_alloc += n_pages << 12;

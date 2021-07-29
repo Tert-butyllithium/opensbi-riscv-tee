@@ -37,7 +37,7 @@ drv_ctrl_t* init_console_driver() {
     // printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
     // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, 1024);
+    console_va = ioremap(NULL, console_ctrl->reg_addr, 1024);
     SBI_CALL5(0x19260817, console_ctrl->reg_addr, console_va,
 	      PAGE_UP(console_ctrl->reg_size), 420);
     // console_va = 0xd0000000;

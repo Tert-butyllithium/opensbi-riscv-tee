@@ -9,7 +9,7 @@
 #include "drv_util.h"
 /* Each Eapp has their own program break */
 uintptr_t prog_brk;
-uintptr_t pt_root;
+// uintptr_t pt_root;
 uintptr_t drv_start_va;
 uintptr_t va_top;
 
@@ -18,7 +18,7 @@ uintptr_t va_top;
 
 static inline void page_map_register()
 {
-    SBI_CALL5(SBI_EXT_EBI, &pt_root, &inv_map, &ENC_VA_PA_OFFSET, EBI_MAP_REGISTER);
+    SBI_CALL5(SBI_EXT_EBI, 0, &inv_map, &ENC_VA_PA_OFFSET, EBI_MAP_REGISTER);
 }
 
 /* Initialize memory for driver, including stack, heap, page table */
@@ -88,10 +88,10 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 
     all_zero();
     // pt_root = spa_get_zero(DRV);
-    pt_root = get_page_table_root();
-    printd("\033[1;33m[S mode init_mem] root: 0x%x\n\033[0m", pt_root);
+    // pt_root = get_page_table_root();
+    printd("\033[1;33m[S mode init_mem] root: 0x%x\n\033[0m", get_page_table_root());
     /* Load ELF running inside enclave */
-    uintptr_t usr_pc = elf_load(pt_root, mem_start, USR, &prog_brk);
+    uintptr_t usr_pc = elf_load(0, mem_start, USR, &prog_brk);
     
     printd("[S mode init_mem] drv_list = 0x%lx\n", drv_list);
     if (drv_list) {
@@ -101,13 +101,13 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
         size_t n_drv_pages = (drv_pa_end - drv_pa_start) >> 12;
         printd("[S mode init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end, drv_pa_start);
         printd("[S mode init_mem] n_drv_pages = %d\n", n_drv_pages);
-        map_page((pte*)pt_root, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, n_drv_pages, PTE_V | PTE_R | PTE_X | PTE_W);
+        map_page(NULL, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start, n_drv_pages, PTE_V | PTE_R | PTE_X | PTE_W);
         printd("\033[1;33m[S mode init_mem] drv: 0x%x - 0x%x -> 0x%x\n\033[0m", drv_pa_start,
         drv_pa_end, __pa(drv_pa_start));
     }
     /* base driver remaining mem */
     /* thus easier manupilating satp */
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + usr_avail_start, usr_avail_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + usr_avail_start, usr_avail_start,
         PAGE_DOWN(usr_avail_size) >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] usr.remain: 0x%x - 0x%x -> 0x%x\n", usr_avail_start,
         usr_avail_start + PAGE_DOWN(usr_avail_size), __pa(usr_avail_start));
@@ -118,7 +118,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t usr_stack_start = EUSR_STACK_START;
     uintptr_t usr_stack_end = EUSR_STACK_END;
     printd("[S mode init_mem] user stack: 0x%lx - 0x%lx\n", usr_stack_start, usr_stack_end);
-    alloc_page((pte*)pt_root, usr_stack_start, n_user_stack_pages,
+    alloc_page(NULL, usr_stack_start, n_user_stack_pages,
         PTE_V | PTE_W | PTE_R | PTE_U, USR);
     uintptr_t usr_sp = usr_stack_end;
 
@@ -129,7 +129,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t text_end = (uintptr_t)&_text_end;
     uintptr_t text_size = text_end - text_start;
     size_t n_base_text_pages = (PAGE_UP(text_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + text_start, text_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + text_start, text_start,
         n_base_text_pages, PTE_V | PTE_X | PTE_R);
     printd("[S mode init_mem] .text: 0x%x - 0x%x -> 0x%x\n", text_start, text_end, __pa(text_start));
 
@@ -139,7 +139,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t page_table_end = (uintptr_t)&_page_table_end;
     uintptr_t page_table_size = page_table_end - page_table_start;
     size_t n_page_table_pages = (PAGE_UP(page_table_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + page_table_start, page_table_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + page_table_start, page_table_start,
         n_page_table_pages, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] page_table: 0x%x - 0x%x -> 0x%x\n", page_table_start, page_table_end, __pa(page_table_start));
 
@@ -149,7 +149,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t rodata_end = (uintptr_t)&_rodata_end;
     uintptr_t rodata_size = rodata_end - rodata_start;
     size_t n_base_rodata_pages = (PAGE_UP(rodata_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + rodata_start, rodata_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + rodata_start, rodata_start,
         n_base_rodata_pages, PTE_V | PTE_R);
     printd("[S mode init_mem] .rodata: 0x%x - 0x%x -> 0x%x\n", rodata_start, rodata_end, __pa(rodata_start));
 
@@ -159,7 +159,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t bss_end = (uintptr_t)&_bss_end;
     uintptr_t bss_size = bss_end - bss_start;
     size_t n_base_bss_pages = (PAGE_UP(bss_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + bss_start, bss_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + bss_start, bss_start,
         n_base_bss_pages, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] .bss: 0x%x - 0x%x -> 0x%x\n", bss_start, bss_end, __pa(bss_start));
 
@@ -169,7 +169,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t init_data_end = (uintptr_t)&_init_data_end;
     uintptr_t init_data_size = init_data_end - init_data_start;
     size_t n_base_init_data_pages = (PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + init_data_start, init_data_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + init_data_start, init_data_start,
         n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] .init.data: 0x%x - 0x%x -> 0x%x\n", init_data_start, init_data_end, __pa(init_data_start));
 
@@ -179,7 +179,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     uintptr_t data_end = (uintptr_t)&_data_end;
     uintptr_t data_size = data_end - data_start;
     size_t n_base_data_pages = (PAGE_UP(data_size)) >> EPAGE_SHIFT;
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + data_start, data_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + data_start, data_start,
         n_base_data_pages, PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] .data: 0x%x - 0x%x -> 0x%x\n", data_start, data_end, __pa(data_start));
 
@@ -189,7 +189,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 
     /* base driver remaining mem */
     /* thus easier manupilating satp */
-    map_page((pte*)pt_root, ENC_VA_PA_OFFSET + base_avail_start,
+    map_page(NULL, ENC_VA_PA_OFFSET + base_avail_start,
         base_avail_start, PAGE_DOWN(base_avail_size) >> EPAGE_SHIFT,
         PTE_V | PTE_W | PTE_R);
     printd("[S mode init_mem] drv.remain: 0x%x - 0x%x -> 0x%x\n", base_avail_start,
@@ -199,15 +199,15 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     size_t n_base_stack_pages = (PAGE_UP(EDRV_STACK_SIZE)) >> EPAGE_SHIFT;
     printd("[S mode init_mem] drv stack uses %d pages\n", n_base_stack_pages);
     uintptr_t drv_sp = EDRV_STACK_TOP - EDRV_STACK_SIZE;
-    alloc_page((pte*)pt_root, drv_sp, n_base_stack_pages, PTE_V | PTE_W | PTE_R,
+    alloc_page(NULL, drv_sp, n_base_stack_pages, PTE_V | PTE_W | PTE_R,
         DRV);
     drv_sp += EDRV_STACK_SIZE;
 
     printd("[S mode init_mem] sp: 0x%lx\n"
             "pt_root: 0x%lx\n",
-            drv_sp, pt_root);
+            drv_sp, get_page_table_root());
     printd("[S mode init_mem] usr sp: 0x%llx\n", usr_sp);
-    uintptr_t satp = pt_root >> EPAGE_SHIFT;
+    uintptr_t satp = get_page_table_root() >> EPAGE_SHIFT;
     satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
     /* allow S mode access U mode memory */

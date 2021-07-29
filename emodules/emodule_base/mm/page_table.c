@@ -11,12 +11,12 @@
 #define printd printf
 #endif
 
-static page_directory page_directory_pool[PAGE_DIR_POOL] __attribute__((section(".page_table")));
-static trie address_trie __attribute__((section(".page_table_trie")));
+static page_directory page_directory_pool[PAGE_DIR_POOL];
+static trie address_trie;
 
-uintptr_t ENC_PA_START;// __attribute__((section(".page_table_trie")));
-uintptr_t ENC_VA_PA_OFFSET;// __attribute__((section(".page_table_trie")));
-inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];// __attribute__((section(".page_table_trie")));
+uintptr_t ENC_PA_START;
+uintptr_t ENC_VA_PA_OFFSET;
+inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];
 
 #define DEBUG_CONDITION(cond) int debug = (cond) ? 1 : 0;
 #define DEBUG if (debug)

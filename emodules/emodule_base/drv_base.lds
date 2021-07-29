@@ -41,7 +41,7 @@ SECTIONS
   }
   _data_end = .;
   
-  . = ALIGN(0x1000);
+  /* . = ALIGN(0x1000);
 
   _page_table_start = .;
   .page_table : {
@@ -52,7 +52,7 @@ SECTIONS
     *(.page_table_trie)
   }
   
-  _page_table_end = .;
+  _page_table_end = .; */
 
 
   . = ALIGN(0x1000);

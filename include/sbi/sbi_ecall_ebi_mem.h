@@ -22,6 +22,7 @@
 				>> SECTION_SHIFT)
 
 #define INVERSE_MAP_ENTRY_NUM 1024
+#define PAGE_DIR_POOL 128
 
 struct section {
 	uintptr_t sfn;	// section frame number

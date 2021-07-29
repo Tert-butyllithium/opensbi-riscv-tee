@@ -20,7 +20,7 @@
 #define MASK_L2 0x7fc0000000
 
 // Pool size for page table itself
-#define PAGE_DIR_POOL 64 
+#define PAGE_DIR_POOL 128
 
 #ifndef __ASSEMBLER__
 
@@ -64,6 +64,7 @@ void test_va(uintptr_t va);
 void set_page_table_root(uintptr_t pt_root);
 uintptr_t get_page_table_root(void);
 uintptr_t get_page_table_root_pointer_addr();
+uintptr_t get_trie_root(); 
 void all_zero(void);
 inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
 void inverse_map_add_count(uintptr_t pa);

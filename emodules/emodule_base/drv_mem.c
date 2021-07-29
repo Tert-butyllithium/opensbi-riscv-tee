@@ -65,12 +65,17 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     drv_addr_list = (void*)(ENC_VA_PA_OFFSET + (void*) drv_addr_list);
     printd("\033[1;33m[S mode init_mem] drv_addr_list=%p at %p, drv_list=%p\n\033[0m",drv_addr_list, &drv_addr_list, drv_list);
 
-    uintptr_t page_table_start =  PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
+    /* currently we assume that the page table is followed by trie*/
+    uintptr_t page_table_start = PAGE_UP((uintptr_t)drv_list + 64 * sizeof(drv_addr_t));
     uintptr_t page_table_size = PAGE_UP(PAGE_DIR_POOL * EPAGE_SIZE);
     uintptr_t page_table_end = page_table_start + page_table_size;
     set_page_table_root(page_table_start);
+
+    uintptr_t trie_start = page_table_end;
+    uintptr_t trie_size = PAGE_UP(PAGE_DIR_POOL * 4 * 512 + 4); // 4 for trie.cnt
+    uintptr_t trie_end = trie_start + trie_size;
     
-    uintptr_t base_avail_start = page_table_end;
+    uintptr_t base_avail_start = trie_end;
     uintptr_t base_avail_end = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
     uintptr_t base_avail_size = PAGE_DOWN(base_avail_end - base_avail_start);
     printd("[S mode init_mem] base_avail_start = 0x%x, base_avail_end = 0x%x\n", base_avail_start, base_avail_end);
@@ -138,8 +143,9 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
 
     /* page_table */
     map_page(NULL, ENC_VA_PA_OFFSET + page_table_start, page_table_start,
-        page_table_size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
-    printd("[S mode init_mem] page_table: 0x%x - 0x%x -> 0x%x\n", page_table_start, page_table_end, __pa(page_table_start));
+        (page_table_size + trie_size) >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
+    printd("[S mode init_mem] page_table and trie: 0x%x - 0x%x -> 0x%x\n",
+                page_table_start, trie_end, __pa(page_table_start));
 
     /* base driver .rodata section */
     extern char _rodata_start, _rodata_end;

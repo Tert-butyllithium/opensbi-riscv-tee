@@ -12,8 +12,8 @@
 #endif
 
 // static page_directory page_directory_pool[PAGE_DIR_POOL];
-static uintptr_t page_directory_pool; // always store pa in this pointer
-static trie address_trie;
+static uintptr_t page_directory_pool; // always store pa in
+// static uintptr_t address_trie; // always store pa
 
 uintptr_t ENC_PA_START;
 uintptr_t ENC_VA_PA_OFFSET;
@@ -94,7 +94,10 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
 				       int attr)
 {
-	uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
+	// uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
+						//     levels, attr);
+	trie *t = (trie *)get_trie_root();
+	uintptr_t p = (uintptr_t)trie_get_or_insert(t, va, pa,
 						    levels, attr);
 	return p;
 }
@@ -106,7 +109,14 @@ void set_page_table_root(uintptr_t pt_root) // should only be invoked before mmu
 
 inline uintptr_t get_page_table_root() // returns accessible addr
 {
+	// printd("[S mode get_page_table_root] satp = 0x%lx\n", read_csr(satp));
 	return page_directory_pool + va_pa_offset();
+}
+
+// returns accessible value; trie is always right behind the page table
+inline uintptr_t get_trie_root()
+{
+	return get_page_table_root() + EPAGE_SIZE * PAGE_DIR_POOL;
 }
 
 uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mmu enabled
@@ -116,9 +126,10 @@ uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mm
 
 static inline void flush_page_table_cache_and_tlb()
 {
-	uintptr_t pt_root = get_pa((uintptr_t)&page_directory_pool);
+	uintptr_t pt_root = page_directory_pool;
 	invalidate_dcache_range(pt_root,
-				pt_root + PAGE_DIR_POOL * EPAGE_SIZE); // invalidation works, why?
+				pt_root + PAGE_DIR_POOL * EPAGE_SIZE
+				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
 	flush_tlb();
 }
 
@@ -236,7 +247,8 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
 	static uintptr_t drv_addr_alloc = 0;
-	printd("current root address: %p\n",get_page_table_root());
+	printd("[S mode ioremap] current root address: 0x%lx\n",
+		get_page_table_root());
 	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
 	map_page(NULL,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);

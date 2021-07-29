@@ -385,15 +385,22 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	inv_map_addr 	= context->inverse_map_addr;
 	offset_addr 	= context->offset_addr;
 
+	pt_root = *(uintptr_t *)pt_root_addr;
+
 	// 1. judge whether the section contains a base module
 	if (src_sfn == SECTION_DOWN(pt_root_addr) >> SECTION_SHIFT) {
 		is_base_module = 1;
 		sbi_printf("[M mode section_migration] is base module\n");
 	}
 
-	// 2. For base module, calculate the new pa of pt_root,
+	// 2. Section content copy, set section va, owner
+	section_copy(src_sfn, dst_sfn);
+	dst_sec->owner = eid;
+	dst_sec->va = linear_start_va;
+
+	// 3. For base module, calculate the new pa of pt_root,
 	//    inv_map, and va_pa_offset.
-	//    Update the enclave context accordingly
+	//    Update the enclave context, and their value accordingly
 	if (is_base_module) {
 		context->pt_root_addr 	  += delta_addr;
 		context->inverse_map_addr += delta_addr;
@@ -404,24 +411,20 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 		pt_root_addr 	= context->pt_root_addr;
 		inv_map_addr 	= context->inverse_map_addr;
 		offset_addr 	= context->offset_addr;
+	
+
+		// update pt_root value, ENC_VA_PA_OFFSET value
+		*(uintptr_t *)pt_root_addr += delta_addr; // value of pt_root update
+		pt_root = *(uintptr_t *)pt_root_addr;
+		satp = pt_root >> EPAGE_SHIFT;
+		satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
+		csr_write(CSR_SATP, satp);
+
+		sbi_printf("[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
+				offset_addr, *(uintptr_t *)offset_addr);
+		*(uintptr_t *)offset_addr -= delta_addr;
+		sbi_printf("new value: 0x%lx\n", *(uintptr_t *)offset_addr);
 	}
-
-	// 3. Section content copy, set section va, owner
-	section_copy(src_sfn, dst_sfn);
-	dst_sec->owner = eid;
-	dst_sec->va = linear_start_va;
-
-	// 3.5 update pt_root value, ENC_VA_PA_OFFSET value
-	*(uintptr_t *)pt_root_addr += delta_addr; // value of pt_root update
-	pt_root = *(uintptr_t *)pt_root_addr;
-	satp = pt_root >> EPAGE_SHIFT;
-	satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
-	csr_write(CSR_SATP, satp);
-
-	sbi_printf("[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
-			offset_addr, *(uintptr_t *)offset_addr);
-	*(uintptr_t *)offset_addr -= delta_addr;
-	sbi_printf("new value: 0x%lx\n", *(uintptr_t *)offset_addr);
 
 	// debug -----
 	sbi_printf("[M mode section_migration] new pt_root = 0x%lx @ 0x%lx\n",
@@ -469,7 +472,10 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	flush_tlb();
 	flush_dcache_range(dst_pa, dst_pa + SECTION_SIZE);
 	invalidate_dcache_range(src_pa, src_pa + SECTION_SIZE);
-	
+	if (!is_base_module) {
+		flush_dcache_range(pt_root,
+				pt_root + PAGE_DIR_POOL * EPAGE_SIZE);
+	}
 
 	return dst_sfn;
 }

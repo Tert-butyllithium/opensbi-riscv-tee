@@ -22,7 +22,8 @@
 				>> SECTION_SHIFT)
 
 #define INVERSE_MAP_ENTRY_NUM 1024
-#define PAGE_DIR_POOL 128
+// NOTE: when modifying, modify mm/page_table.h at the same time!!!!!!!
+#define PAGE_DIR_POOL 256
 
 struct section {
 	uintptr_t sfn;	// section frame number

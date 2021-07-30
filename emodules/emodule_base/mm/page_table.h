@@ -20,7 +20,8 @@
 #define MASK_L2 0x7fc0000000
 
 // Pool size for page table itself
-#define PAGE_DIR_POOL 128
+// NOTE: when modifying, modify sbi_ecall_ebi_mem.h at the same time!!!!!!!
+#define PAGE_DIR_POOL 256
 
 #ifndef __ASSEMBLER__
 

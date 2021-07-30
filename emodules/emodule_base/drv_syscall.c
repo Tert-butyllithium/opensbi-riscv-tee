@@ -47,7 +47,7 @@ int ebi_brk(uintptr_t addr) {
     }
     prog_brk = addr;
     printd("####### brk end########\n");
-    flush_tlb();
+//     flush_tlb();
     return addr;
 }
 

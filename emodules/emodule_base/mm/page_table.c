@@ -127,6 +127,9 @@ uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mm
 static inline void flush_page_table_cache_and_tlb()
 {
 	uintptr_t pt_root = page_directory_pool;
+	// flush_dcache_range(pt_root,
+	// 			pt_root + PAGE_DIR_POOL * EPAGE_SIZE
+	// 			+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // flush does not work, why?
 	invalidate_dcache_range(pt_root,
 				pt_root + PAGE_DIR_POOL * EPAGE_SIZE
 				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
@@ -267,7 +270,8 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 	printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
 			va, n_pages);
 	while (n_pages >= 1) {
-		pa = spa_get_pa_zero(id);
+		// pa = spa_get_pa_zero(id);
+		pa = spa_get_pa(id);
 		if (pa == prev_pa + EPAGE_SIZE
 		&& SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
 			// inverse_map_add_count(base_pa);

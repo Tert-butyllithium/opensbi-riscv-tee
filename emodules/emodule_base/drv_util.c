@@ -1,4 +1,5 @@
 #include "drv_util.h"
+#include "mm/page_table.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -184,4 +185,14 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 		asm volatile ("dcache.ipa a0");
 
 	asm volatile (".long 0x01b0000b");
+}
+
+void flush_tlb_range(unsigned long start, unsigned long end)
+{
+  for (uintptr_t i = start; i < end; i += EPAGE_SIZE) {
+    __asm__ __volatile__("sfence.vma %0"
+				     :
+				     : "r"(i)
+				     : "memory");
+  }
 }

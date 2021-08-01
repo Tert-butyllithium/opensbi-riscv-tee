@@ -222,6 +222,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     page_map_register(); // tell m mode where page table and inverse mapping are
     va_top += EMEM_SIZE;
     flush_dcache_range(ENC_PA_START, ENC_PA_START + EMEM_SIZE);
+    // asm volatile("fence rw, rw");
 
     asm volatile ("mv a0, %0"::"r"((uintptr_t)(satp)));
     asm volatile ("mv a1, %0"::"r"((uintptr_t)(drv_sp)));

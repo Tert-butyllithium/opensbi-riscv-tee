@@ -133,6 +133,7 @@ static inline void flush_page_table_cache_and_tlb()
 	invalidate_dcache_range(pt_root,
 				pt_root + PAGE_DIR_POOL * EPAGE_SIZE
 				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
+	// asm volatile("fence rw, rw");
 	flush_tlb();
 }
 

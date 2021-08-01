@@ -6,7 +6,7 @@
 #include "drv_base.h"
 
 void handle_interrupt(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-
+    printd("[S mode handle_interrupt] start, scause = 0x%lx\n", scause);
     // uintptr_t sip, sie;
     switch (scause)
     {

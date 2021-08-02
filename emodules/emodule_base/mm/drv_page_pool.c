@@ -68,6 +68,7 @@ void __spa_put(uintptr_t pa, struct pg_list* pool) {
 
 
 // returns virtual addr of the page, -1 on failure
+// if Out Of Memory, try allocate a memory section from M mode
 uintptr_t __spa_get(struct pg_list* pool) {
     uintptr_t page, ret, next;
     if (LIST_EMPTY(pool)) {

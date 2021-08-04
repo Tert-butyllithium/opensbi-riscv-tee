@@ -98,6 +98,8 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
 	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
+	loop_test();
+
 	init_other_driver();
 
 	/* allow S mode access U mode memory */

@@ -77,7 +77,8 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	tmp_pte->pte_v = tmp_pte->pte_g = 1;
 	// tmp_pte->pte_v = 1;
 	if (attr & PTE_C) {
-		tmp_pte->pte_c = tmp_pte->pte_b = tmp_pte->pte_s = 1;
+		// tmp_pte->pte_c = tmp_pte->pte_b = tmp_pte->pte_s = 1;
+		tmp_pte->pte_c = 1;
 	}
 	if(attr & PTE_U){
 		tmp_pte->pte_u = 1;
@@ -131,12 +132,12 @@ uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mm
 static inline void flush_page_table_cache_and_tlb()
 {
 	uintptr_t pt_root = page_directory_pool;
-	// flush_dcache_range(pt_root,
-	// 			pt_root + PAGE_DIR_POOL * EPAGE_SIZE
-	// 			+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // flush does not work, why?
-	invalidate_dcache_range(pt_root,
+	flush_dcache_range(pt_root,
 				pt_root + PAGE_DIR_POOL * EPAGE_SIZE
-				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
+				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // flush does not work, why?
+	// invalidate_dcache_range(pt_root,
+	// 			pt_root + PAGE_DIR_POOL * EPAGE_SIZE
+	// 			+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
 	// asm volatile("fence rw, rw");
 	flush_tlb();
 }

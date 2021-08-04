@@ -131,10 +131,6 @@ _start:
     # fence.i
     # icache.iall
 
-    SAVE_CONTEXT
-    jal     loop_test
-    RESTORE_CONTEXT
-
     /* switch to trap handler */
     la      s7, trap_handler
     csrw    stvec,  s7

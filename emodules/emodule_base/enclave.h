@@ -254,7 +254,9 @@ static inline void flush_tlb()
 #define PTE_A     0x040 // Accessed
 #define PTE_D     0x080 // Dirty
 #define PTE_SOFT  0x300 // Reserved for Software
-#define PTE_C     0x4000000000000000UL // Cacheable
+
+#define PTE_C_SHIFT 62
+#define PTE_C     (1UL << PTE_C_SHIFT) // Cacheable
 
 #define PTE_PPN_SHIFT 10
 

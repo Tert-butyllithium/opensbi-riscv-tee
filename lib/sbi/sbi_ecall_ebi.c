@@ -28,9 +28,11 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
     enclave_context *context = &enclaves[eid];
 
     struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
+    uintptr_t linux_satp = csr_read(CSR_SATP); //debug
 
     switch (funcid) {
     case SBI_EXT_EBI_CREATE:
+        sbi_printf("[sbi_ecall_ebi_handler] linux satp = 0x%lx\n", linux_satp);
         sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_CREATE\n");
         sbi_printf("[sbi_ecall_ebi_handler] extid = %lu, funcid = 0x%lx, args[0] = 0x%lx, args[1] = 0x%lx, core = %lu\n", 
             extid, funcid, args[0], args[1], core);

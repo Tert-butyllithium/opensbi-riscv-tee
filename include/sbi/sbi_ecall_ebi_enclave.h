@@ -219,7 +219,8 @@ typedef struct pte {
     uint32_t pte_d: 1;
     uint32_t rsw: 2;
     uintptr_t ppn: 28;
-    uintptr_t __unused_value: 23;
+    uintptr_t __unused_value: 22;
+    uintptr_t pte_s: 1;
     uintptr_t pte_b: 1;
     uintptr_t pte_c: 1;
     uintptr_t pte_so: 1;

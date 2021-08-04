@@ -128,6 +128,8 @@ _start:
 .align 2
 2:
     sfence.vma
+    # fence.i
+    # icache.iall
 
     SAVE_CONTEXT
     jal     loop_test

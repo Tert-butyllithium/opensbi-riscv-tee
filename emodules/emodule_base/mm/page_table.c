@@ -40,7 +40,7 @@ static inline uintptr_t acce_to_phys(uintptr_t acce_addr)
  */
 static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 				    const uintptr_t pa, const int len,
-				    const int attr)
+				    const uintptr_t attr)
 {
 	uint32_t p = 0, i = 0;
 	page_directory *page_table = (page_directory *)get_page_table_root();
@@ -75,8 +75,9 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 		tmp_pte->ppn = (tmp_pte->ppn | MASK_OFFSET) ^ MASK_OFFSET;
 	}
 	tmp_pte->pte_v = tmp_pte->pte_g = 1;
+	// tmp_pte->pte_v = 1;
 	if (attr & PTE_C) {
-		tmp_pte->pte_c = tmp_pte->pte_b = 1;
+		tmp_pte->pte_c = tmp_pte->pte_b = tmp_pte->pte_s = 1;
 	}
 	if(attr & PTE_U){
 		tmp_pte->pte_u = 1;
@@ -91,12 +92,11 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 		tmp_pte->pte_x = 1;
 	}
 
-
 	return *((uintptr_t *)tmp_pte);
 }
 
 static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
-				       int attr)
+				       uintptr_t attr)
 {
 	// uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
 						//     levels, attr);

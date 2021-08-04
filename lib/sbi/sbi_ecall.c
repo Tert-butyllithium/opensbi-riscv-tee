@@ -101,7 +101,7 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	}
 
 	// The ecall is a syscall if it is from U-mode but a7 is not SBI_EXT_EBI
-	if (prev_mode == 0 && regs->a7 != SBI_EXT_EBI) {
+	if (prev_mode == 0 && regs->a7 != SBI_EXT_EBI && regs->a7 != SBI_EXT_DEBUG) {
 		trap.epc   = regs->mepc;
 		trap.cause = mcause;
 		trap.tval  = mtval;

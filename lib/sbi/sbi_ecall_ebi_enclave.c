@@ -6,6 +6,7 @@
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_ecall_ebi_mem.h>
+#include "../../platform/thead/c910/platform.h"
 
 // #define MAX_PAGE 8192
 // static enclave_page_t pages[MAX_PAGE];
@@ -497,6 +498,10 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 
 	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
 	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
+
+	uintptr_t mxstatus = csr_read(CSR_MXSTATUS);
+	sbi_printf("[M mode enter_enclave] mxstatus = 0x%lx\n", mxstatus);
+
 
 	regs->a0 = id;
 	regs->a1 = id;

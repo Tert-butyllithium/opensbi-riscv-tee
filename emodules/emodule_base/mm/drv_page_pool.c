@@ -148,7 +148,7 @@ static uintptr_t alloc_mem_from_m(struct pg_list* pool)
     // linearly map the allocated memory by va_pa_offset
     printd("[S mode alloc_mem_from_m] va_top = 0x%lx\n", va_top);
     map_page(NULL, va_top, addr,
-                size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
+                size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R | PTE_C);
 
     // test
     // SBI_CALL5(0xdeadbeef, addr, 0, 0, 0);

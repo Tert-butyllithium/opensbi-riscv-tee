@@ -32,11 +32,11 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id, uintptr_t* pr
         {
             n_pages = (PAGE_UP(phdr.p_filesz) >> EPAGE_SHIFT) + 1;
             //printd("mapping %d page from %x to %x\n", n_pages, PAGE_DOWN(phdr.p_vaddr), PAGE_DOWN(elf_addr + phdr.p_offset));
-            map_page(NULL, PAGE_DOWN(phdr.p_vaddr), PAGE_DOWN(elf_addr + phdr.p_offset), n_pages, PTE_U | __pt2pte(phdr.p_flags));
+            map_page(NULL, PAGE_DOWN(phdr.p_vaddr), PAGE_DOWN(elf_addr + phdr.p_offset), n_pages, PTE_U | PTE_C | __pt2pte(phdr.p_flags));
             if ((n_pages << EPAGE_SHIFT) < phdr.p_memsz)
             {
                 n_pages = PAGE_UP(phdr.p_memsz - phdr.p_filesz) >> EPAGE_SHIFT;
-                alloc_page(NULL, PAGE_DOWN(phdr.p_vaddr + phdr.p_filesz), n_pages, PTE_U | __pt2pte(phdr.p_flags), id);
+                alloc_page(NULL, PAGE_DOWN(phdr.p_vaddr + phdr.p_filesz), n_pages, PTE_U | PTE_C | __pt2pte(phdr.p_flags), id);
             }
             break;
         }

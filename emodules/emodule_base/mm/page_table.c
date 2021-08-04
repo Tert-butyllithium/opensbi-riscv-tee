@@ -75,6 +75,9 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 		tmp_pte->ppn = (tmp_pte->ppn | MASK_OFFSET) ^ MASK_OFFSET;
 	}
 	tmp_pte->pte_v = tmp_pte->pte_g = 1;
+	if (attr & PTE_C) {
+		tmp_pte->pte_c = tmp_pte->pte_b = 1;
+	}
 	if(attr & PTE_U){
 		tmp_pte->pte_u = 1;
 	}
@@ -87,6 +90,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	if(attr & PTE_X){
 		tmp_pte->pte_x = 1;
 	}
+
 
 	return *((uintptr_t *)tmp_pte);
 }

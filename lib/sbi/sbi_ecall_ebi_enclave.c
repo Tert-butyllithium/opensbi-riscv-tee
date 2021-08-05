@@ -589,9 +589,11 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs)
 }
 
 extern char _console_start, _console_end;
+extern char _net_start, _net_end;
 // extern char _drv_rtc_start, _drv_rtc_end;
 drv_addr_t bbl_addr_list[MAX_DRV] = {
-    {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1}
+    {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1},
+	{(uintptr_t)& _net_start,(uintptr_t)&_net_end, -1}
 //     {(uintptr_t)&_drv_rtc_start, (uintptr_t)&_drv_rtc_end, -1}
 };
 

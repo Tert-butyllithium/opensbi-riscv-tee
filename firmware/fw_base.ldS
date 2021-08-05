@@ -93,4 +93,9 @@
 		*(.drvconsole)
 	}
 
+	.drvnet :
+	{
+		*(.drvnet)
+	}
+
 	

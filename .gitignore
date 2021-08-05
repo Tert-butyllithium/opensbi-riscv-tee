@@ -18,3 +18,6 @@ make.sh
 emodules/emodule_base/emodule_base
 emodules/emodule_base/emodule_base.bin
 firmware/emodule_base
+emodules/drv_net/drv_net.bin
+emodules/drv_net/common.c
+emodules/drv_net/drv_net

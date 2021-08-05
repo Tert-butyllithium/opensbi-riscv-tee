@@ -129,9 +129,10 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		ret = SBI_ENOTSUPP;
 	}
 
-	if (extension_id == SBI_EXT_EBI)
+	if (extension_id == SBI_EXT_EBI){
 		sbi_printf("[sbi_ecall_handler] EBI ret = %d\n", ret);
-
+		sbi_printf("mepc: 0x%lx",regs->mepc);
+	}
 	if (ret == SBI_ETRAP) {
 		trap.epc = regs->mepc;
 		sbi_trap_redirect(regs, &trap, scratch);

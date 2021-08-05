@@ -78,13 +78,19 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 				 unsigned long *args, unsigned long *out_val,
 				 struct sbi_trap_info *out_trap)
 {
+	uintptr_t pa = args[0];
+	if( funcid == 100 ){
+		sbi_putc(pa);
+		return 0;
+	}
+
+	uintptr_t *ptr = (uintptr_t *)pa;
 	sbi_printf("[debug_handler] ############## DEBUG START ###########\n");
 										// mem_dump(0x48000000, 16);
 										// mem_dump(0x50000000, 16);
 										// dma_copy(0x48000000, 0x50000000, 4096);
 										// mem_dump(0x50000000, 16);
-	uintptr_t pa = args[0];
-	uintptr_t *ptr = (uintptr_t *)pa;
+
 
 	invalidate_dcache_range(pa, pa + 0x1000);
 	sbi_printf("%p: 0x%lx\n", ptr, *ptr);

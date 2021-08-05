@@ -22,7 +22,7 @@ drv_ctrl_t* init_console_driver() {
     // printd("\033[0;32m[init_console_driver] drv_addr_list: 0x%p\n\033[0m", drv_addr_list);
     drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
     // drv_console_end = drv_addr_list[DRV_CONSOLE].drv_end;
-    // printd("[init_console_driver] drv_console_start: 0x%x drv_console_end: 0x%x\n", drv_console_start, drv_console_end);
+    printd("[init_console_driver] drv_console_start: 0x%x drv_console_end: 0x%x\n", drv_console_start, drv_console_end);
 
     // console_drv_size = drv_console_end - drv_console_start;
     // n_console_drv_pages = (PAGE_UP(console_drv_size)) >> EPAGE_SHIFT;
@@ -37,9 +37,8 @@ drv_ctrl_t* init_console_driver() {
     // printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
     // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, 1024);
-    SBI_CALL5(0x19260817, console_ctrl->reg_addr, console_va,
-	      PAGE_UP(console_ctrl->reg_size), 420);
+    console_va = ioremap((pte*)pt_root,console_ctrl->reg_addr,1024);
+
     // console_va = 0xd0000000;
     // uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
     // console_va = console_ctrl->reg_addr;
@@ -50,6 +49,38 @@ drv_ctrl_t* init_console_driver() {
     printd("Console driver init successfully\n");
     
     return console_ctrl;
+}
+
+drv_ctrl_t* init_net_driver(){
+    uintptr_t drv_net_start;
+    cmd_handler net_handler;
+    drv_ctrl_t* net_ctrl;
+    uintptr_t cnt, va;
+    int i;
+
+    drv_net_start = drv_addr_list[DRV_NET].drv_start;
+    printd("\033[0;36mdrv_net_start: 0x%lx\n\033[0m", drv_net_start);
+
+    net_handler = (cmd_handler)drv_net_start;
+    cnt		= net_handler(QUERY_INFO, QUERY_INFO, 0, 0);
+
+    // tell drv_console_start to drv_net
+    // net_handler(QUERY_INFO, 100, drv_addr_list[DRV_CONSOLE].drv_start, 0);
+    net_handler(QUERY_INFO, 200, (uintptr_t)&printd, 0);
+
+    printd("peripheral cnt: %ld\n", cnt);
+    for (i = 0; i < cnt; i++) {
+	    net_ctrl = (drv_ctrl_t *)net_handler(QUERY_INFO, i, 0, 0);
+	    printd("net_ctrl %d: {reg_addr: 0x%lx}\n", i, net_ctrl->reg_addr);
+	    va = ioremap((pte *)pt_root, net_ctrl->reg_addr, net_ctrl->reg_size);
+        
+        // net_cmd_handler(IOMAP_INIT, i, va)
+        net_handler(0, i, va, 0);
+    }
+    
+    printd("doing ping\n");
+    // do_ping
+    net_handler(1, 0, 0, 0);
 }
 
 // drv_ctrl_t* init_rtc_driver() {

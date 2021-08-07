@@ -11,6 +11,11 @@
 		i < MEMORY_POOL_SECTION_NUM; \
 		i++, section = &pool[i])
 
+#define for_each_section_in_pool_rev(pool, section, i) \
+	for (i = MEMORY_POOL_SECTION_NUM - 1, section = &pool[i]; \
+		i >= 0; \
+		i--, section = &pool[i])
+
 #define sfn_to_section(sfn) \
 	&memory_pool[((sfn) - (MEMORY_POOL_START >> SECTION_SHIFT))]
 
@@ -27,6 +32,8 @@ struct region {
 
 static struct section *find_avail_section(void);
 static void page_compaction();
+static uintptr_t find_lowest_avail();
+static uintptr_t find_highest_used();
 static struct region find_smallest_region(int eid);
 static struct region find_avail_region_larger_than(int length);
 static int get_avail_pmp_count(enclave_context *context);
@@ -158,7 +165,50 @@ found:
 
 static void page_compaction()
 {
+	uintptr_t lowest_avail_sfn = find_lowest_avail();
+	uintptr_t highest_used_sfn = find_highest_used();
+
+	if (!lowest_avail_sfn || !highest_used_sfn) {
+		sbi_printf("[M mode page_compaction] something goes wrong\n");
+		return;
+	}
+
+	while (lowest_avail_sfn < highest_used_sfn) {
+		section_migration(highest_used_sfn, lowest_avail_sfn);
+	
+		lowest_avail_sfn = find_lowest_avail();
+		highest_used_sfn = find_highest_used();
+	}
+	
 	return;
+}
+
+static uintptr_t find_lowest_avail()
+{
+	int i;
+	struct section *sec;
+
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner < 0) {
+			return sec->sfn;
+		}
+	}
+
+	return 0;
+}
+
+static uintptr_t find_highest_used()
+{
+	int i;
+	struct section *sec;
+
+	for_each_section_in_pool_rev(memory_pool, sec, i) {
+		if (sec->owner > 0) { // 0 for Linux itself
+			return sec->sfn;
+		}
+	}
+
+	return 0;
 }
 
 static struct region find_avail_region_larger_than(int length)

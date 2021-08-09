@@ -53,13 +53,11 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
 	pte *tmp_pte;
-	pte *debug_pte;
 
 	// for a three level page table, only two PPNs need to point to next level
 	for (; i < len - 1; i++) {
 		if (!t->next[p][l[i]]) {
 			t->next[p][l[i]] = ++t->cnt;
-			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
 
 			tmp_pte = &page_table[p][l[i]];
 			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_table[t->cnt][0]) >> 12;
@@ -114,7 +112,6 @@ void set_page_table_root(uintptr_t pt_root) // should only be invoked before mmu
 
 inline uintptr_t get_page_table_root() // returns accessible addr
 {
-	// printd("[S mode get_page_table_root] satp = 0x%lx\n", read_csr(satp));
 	return page_directory_pool + va_pa_offset();
 }
 
@@ -145,7 +142,6 @@ static inline void flush_page_table_cache_and_tlb()
 void print_pte(uintptr_t va){
 		uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
-	pte entry;
 	pte *root = (void*) get_page_table_root();
 	pte tmp_entry;
 	uintptr_t tmp;
@@ -181,14 +177,11 @@ uintptr_t get_pa(uintptr_t va)
 {
 	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
-	pte entry;
 	pte *root = (void*) get_page_table_root();
 	pte tmp_entry;
 	uintptr_t tmp;
 	int i = 0;
 	while (1) {
-		// printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n",
-			// i, root, ENC_VA_PA_OFFSET);
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			printd("ERROR: va:0x%lx is not valid!!!\n", va);
@@ -223,7 +216,6 @@ void test_va(uintptr_t va)
 void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	      uintptr_t attr)
 {
-	pte *pt;
 	char is_text = 0;
 
 	if (va <= 0x100000) // to be modified: used by load_elf
@@ -256,8 +248,6 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
 	static uintptr_t drv_addr_alloc = 0;
-	printd("[S mode ioremap] current root address: 0x%lx\n",
-		get_page_table_root());
 	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
 	map_page(NULL,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
@@ -269,12 +259,9 @@ uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 		     char id)
 {
-	pte *pt;
-	uintptr_t pa, prev_pa = 0, base_pa = 0;
+	uintptr_t pa, prev_pa = 0;
 	inverse_map *inv_map_entry;
 
-	printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
-			va, n_pages);
 	while (n_pages >= 1) {
 		// pa = spa_get_pa_zero(id);
 		pa = spa_get_pa(id);
@@ -288,17 +275,12 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 				printd("[S mode alloc_page] ERROR!\n");
 				return 0;
 			}
-
-			base_pa = pa;
 		}
-		// printd("[S mode alloc_page] va: 0x%lx, pa: 0x%lx\n", va, pa);
 		page_directory_insert(va, pa, 3, attr);
 		prev_pa = pa;
 		va += EPAGE_SIZE;
 		n_pages--;
 	}
-
-	dump_inverse_map();
 
 	if (read_csr(satp)) {
 		flush_page_table_cache_and_tlb();
@@ -331,14 +313,8 @@ inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 {
 	int i = 0;
 
-	printd("[s mode insert_inverse_map] "
-		"pa: 0x%lx, va: 0x%lx\n",
-		pa, va, count);
 	for (; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) { // already exists; should update
-			printd("[s mode insert_inverse_map] updating entry; "
-				"original va: 0x%lx, count: %d\n",
-					va, count);
 			if (count != inv_map[i].count) {
 				// something goes wrong
 				printd("[s mode insert_inverse_map] "
@@ -359,7 +335,6 @@ inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 	inv_map[i].pa = pa;
 	inv_map[i].va = va;
 	inv_map[i].count = count;
-	printd("[s mode insert_inverse_map] new entry\n");
 
 	return &inv_map[i];
 }
@@ -371,10 +346,6 @@ void inverse_map_add_count(uintptr_t pa)
 	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) {
 			inv_map[i].count++;
-			if (inv_map[i].count % 100 == 0)
-				printd("[S mode inverse_map_add_count] "
-					"pa: 0x%lx, new count: %d\n",
-					pa, inv_map[i].count);
 			return;
 		}
 	}

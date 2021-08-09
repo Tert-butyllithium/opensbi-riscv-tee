@@ -95,9 +95,6 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	if (regs->a7 == SBI_EXT_EBI) {
 		count_ebi++;
 		regs->a5 = (uintptr_t)regs;
-		sbi_printf("[sbi_ecall_handler] count = %d, a5 is set to 0x%lx, a6 == %lu, a7 == SBI_EXT_EBI\n",
-			count_ebi, regs->a5, func_id);
-		sbi_printf("[sbi_ecall_handler] mepc = 0x%lx\n", regs->mepc);
 	}
 
 	// The ecall is a syscall if it is from U-mode but a7 is not SBI_EXT_EBI
@@ -129,9 +126,6 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 	} else {
 		ret = SBI_ENOTSUPP;
 	}
-
-	if (extension_id == SBI_EXT_EBI)
-		sbi_printf("[sbi_ecall_handler] EBI ret = %d\n", ret);
 
 	if (ret == SBI_ETRAP) {
 		trap.epc = regs->mepc;
@@ -185,8 +179,6 @@ int sbi_ecall_init(void)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_debug);
 	init_enclaves();
-	sbi_printf("############### init ecall_ebi successfully\n");
-	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);
 	if (ret)
 		return ret;
 	return 0;

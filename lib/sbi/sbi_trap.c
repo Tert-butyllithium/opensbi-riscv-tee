@@ -28,8 +28,8 @@ static void __noreturn sbi_trap_error(const char *msg, int rc, u32 hartid,
 	sbi_printf("%s: hart%d: mcause=0x%" PRILX " mtval=0x%" PRILX "\n",
 		   __func__, hartid, mcause, mtval);
 	if (misa_extension('H')) {
-		sbi_printf("%s: hart%d: mtval2=0x%" PRILX
-			   " mtinst=0x%" PRILX "\n",
+		sbi_printf("%s: hart%d: mtval2=0x%" PRILX " mtinst=0x%" PRILX
+			   "\n",
 			   __func__, hartid, mtval2, mtinst);
 	}
 	sbi_printf("%s: hart%d: mepc=0x%" PRILX " mstatus=0x%" PRILX "\n",
@@ -70,22 +70,27 @@ static void __noreturn sbi_trap_error(const char *msg, int rc, u32 hartid,
 	sbi_hart_hang();
 }
 
-
-
 /**
  * Test if this exception is due to PMP
  * 
  * @param addr the address try to access
  * @param 
  * 
- */ 
-peri_addr_t* pmp_exception_handle(uintptr_t addr, uint32_t hartid){
-	int i = 0;
-	enclave_context* context = &enclaves[enclave_on_core[hartid]];
-	sbi_printf("[pmp_exception_handle] context id: %lx, peri_cnt: %d \n", context->id, context->peri_cnt);
-	for(; i < context->peri_cnt; i++){
-		sbi_printf("[pmp_exception_handle] %lx~%lx\n",context->peri_list[i].reg_va_start, context->peri_list[i].reg_va_start + context->peri_list[i].reg_size);
-		if(addr >= context->peri_list[i].reg_va_start && addr < context->peri_list[i].reg_va_start + context->peri_list[i].reg_size){
+ */
+peri_addr_t *pmp_exception_handle(uintptr_t addr, uint32_t hartid)
+{
+	int i			 = 0;
+	enclave_context *context = &enclaves[enclave_on_core[hartid]];
+	// sbi_printf("[pmp_exception_handle] context id: %lx, peri_cnt: %d \n",
+		//    context->id, context->peri_cnt);
+	for (; i < context->peri_cnt; i++) {
+		// sbi_printf("[pmp_exception_handle] %lx~%lx\n",
+			//    context->peri_list[i].reg_va_start,
+			//    context->peri_list[i].reg_va_start +
+				//    context->peri_list[i].reg_size);
+		if (addr >= context->peri_list[i].reg_va_start &&
+		    addr < context->peri_list[i].reg_va_start +
+				    context->peri_list[i].reg_size) {
 			return &context->peri_list[i];
 		}
 	}
@@ -101,8 +106,7 @@ peri_addr_t* pmp_exception_handle(uintptr_t addr, uint32_t hartid){
  *
  * @return 0 on success and negative error code on failure
  */
-int sbi_trap_redirect(struct sbi_trap_regs *regs,
-		      struct sbi_trap_info *trap,
+int sbi_trap_redirect(struct sbi_trap_regs *regs, struct sbi_trap_info *trap,
 		      struct sbi_scratch *scratch)
 {
 	ulong hstatus, vsstatus, prev_mode;
@@ -235,16 +239,15 @@ int sbi_trap_redirect(struct sbi_trap_regs *regs,
  * @param regs pointer to register state
  * @param scratch pointer to sbi_scratch of current HART
  */
-void sbi_trap_handler(struct sbi_trap_regs *regs,
-		      struct sbi_scratch *scratch)
+void sbi_trap_handler(struct sbi_trap_regs *regs, struct sbi_scratch *scratch)
 {
-	int rc = SBI_ENOTSUPP;
+	int rc		= SBI_ENOTSUPP;
 	const char *msg = "trap handler failed";
-	u32 hartid = sbi_current_hartid();
-	ulong mcause = csr_read(CSR_MCAUSE);
+	u32 hartid	= sbi_current_hartid();
+	ulong mcause	= csr_read(CSR_MCAUSE);
 	ulong mtval = csr_read(CSR_MTVAL), mtval2 = 0, mtinst = 0;
 	struct sbi_trap_info trap, *uptrap;
-	__attribute__((unused)) peri_addr_t* pmp_test = NULL;
+	__attribute__((unused)) peri_addr_t *pmp_test = NULL;
 	// ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 
 	if (misa_extension('H')) {
@@ -270,31 +273,30 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 
 	switch (mcause) {
 	case CAUSE_ILLEGAL_INSTRUCTION:
-		rc  = sbi_illegal_insn_handler(hartid, mcause, mtval,
-					       regs, scratch);
+		rc  = sbi_illegal_insn_handler(hartid, mcause, mtval, regs,
+					       scratch);
 		msg = "illegal instruction handler failed";
-		sbi_printf("%s\n",msg);
-		while(1);
+		sbi_printf("%s\n", msg);
+		while (1)
+			;
 		break;
 	case CAUSE_MISALIGNED_LOAD:
-		rc = sbi_misaligned_load_handler(hartid, mcause, mtval,
-						 mtval2, mtinst, regs,
-						 scratch);
+		rc  = sbi_misaligned_load_handler(hartid, mcause, mtval, mtval2,
+						  mtinst, regs, scratch);
 		msg = "misaligned load handler failed";
-		sbi_printf("%s\n",msg);
+		sbi_printf("%s\n", msg);
 		break;
 	case CAUSE_MISALIGNED_STORE:
-		rc  = sbi_misaligned_store_handler(hartid, mcause, mtval,
-						   mtval2, mtinst, regs,
-						   scratch);
+		rc = sbi_misaligned_store_handler(hartid, mcause, mtval, mtval2,
+						  mtinst, regs, scratch);
 		msg = "misaligned store handler failed";
-		sbi_printf("%s\n",msg);
+		sbi_printf("%s\n", msg);
 		break;
 	case CAUSE_SUPERVISOR_ECALL:
 	case CAUSE_HYPERVISOR_ECALL:
 	case CAUSE_USER_ECALL:
 		// if (prev_mode != 1)
-			// sbi_printf("previous mode is %lu\n", prev_mode);
+		// sbi_printf("previous mode is %lu\n", prev_mode);
 		rc  = sbi_ecall_handler(hartid, mcause, regs, scratch);
 		msg = "ecall handler failed";
 		// sbi_printf("%s\n",msg);
@@ -305,46 +307,44 @@ void sbi_trap_handler(struct sbi_trap_regs *regs,
 	case CAUSE_STORE_PAGE_FAULT:
 		uptrap = sbi_hart_get_trap_info(scratch);
 		if ((regs->mstatus & MSTATUS_MPRV) && uptrap) {
-			sbi_printf("upper branch\n");
-			rc = 0;
+			rc	    = 0;
 			uptrap->epc = regs->mepc;
 			regs->mepc += 4;
 			uptrap->cause = mcause;
-			uptrap->tval = mtval;
+			uptrap->tval  = mtval;
 			uptrap->tval2 = mtval2;
 			uptrap->tinst = mtinst;
 		} else {
-			trap.epc = regs->mepc;
+			trap.epc   = regs->mepc;
 			trap.cause = mcause;
-			trap.tval = mtval;
+			trap.tval  = mtval;
 			trap.tval2 = mtval2;
 			trap.tinst = mtinst;
-			rc = sbi_trap_redirect(regs, &trap, scratch);
+			rc	   = sbi_trap_redirect(regs, &trap, scratch);
 		}
-		if ((pmp_test = pmp_exception_handle(csr_read(CSR_STVAL), hartid))!=NULL) {
-			sbi_printf("\033[0;34m[sbi_trap_handler] addr in peri mepc: 0x%lx\n\033[0m", csr_read(CSR_MEPC));
+		if ((pmp_test = pmp_exception_handle(csr_read(CSR_STVAL),
+						     hartid)) != NULL) {
 			pmp_allow_access(pmp_test);
 			regs->mepc = csr_read(CSR_MEPC);
 			// regs->mstatus &= ~ (3 << MSTATUS_MPP_SHIFT);
 			break;
 		}
 		msg = "page/access fault handler failed";
-		sbi_printf("%s at 0x%lx, sepc=0x%lx\n",msg, csr_read(CSR_STVAL), csr_read(CSR_SEPC));
 		break;
 	default:
 		/* If the trap came from S or U mode, redirect it there */
-		trap.epc = regs->mepc;
+		trap.epc   = regs->mepc;
 		trap.cause = mcause;
-		trap.tval = mtval;
+		trap.tval  = mtval;
 		trap.tval2 = mtval2;
 		trap.tinst = mtinst;
-		rc = sbi_trap_redirect(regs, &trap, scratch);
+		rc	   = sbi_trap_redirect(regs, &trap, scratch);
 		break;
 	};
 
 trap_error:
 	if (rc) {
-		sbi_trap_error(msg, rc, hartid, mcause, mtval,
-			       mtval2, mtinst, regs);
+		sbi_trap_error(msg, rc, hartid, mcause, mtval, mtval2, mtinst,
+			       regs);
 	}
 }

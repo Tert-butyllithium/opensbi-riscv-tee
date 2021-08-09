@@ -25,17 +25,17 @@ static void inline mem_dump(uintptr_t addr, uintptr_t len)
 	sbi_printf("\n[M mode mem_dump] end ------------------------\n");
 }
 #define __unused __attribute__((unused)) // to be removed
-__unused static pte* get_pte(uintptr_t pt_root, uintptr_t va)
+__unused static pte *get_pte(uintptr_t pt_root, uintptr_t va)
 {
 	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
-	pte *root = (pte *)pt_root;
+	pte *root     = (pte *)pt_root;
 	pte tmp_entry;
 	uintptr_t tmp;
 	int i = 0;
 
 	sbi_printf("[M mode get_pte] look for pte of va 0x%lx, root at 0x%p\n",
-			va, root);
+		   va, root);
 	while (1) {
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
@@ -43,7 +43,7 @@ __unused static pte* get_pte(uintptr_t pt_root, uintptr_t va)
 		}
 		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
 			sbi_printf("[M mode get_pte] pte = 0x%lx, at %p\n",
-					*(uintptr_t *)&tmp_entry, &root[l[i]]);
+				   *(uintptr_t *)&tmp_entry, &root[l[i]]);
 			return &root[l[i]];
 		}
 		tmp  = tmp_entry.ppn << 12;
@@ -53,26 +53,28 @@ __unused static pte* get_pte(uintptr_t pt_root, uintptr_t va)
 }
 
 static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
-				 unsigned long extid, unsigned long funcid,
-				 unsigned long *args, unsigned long *out_val,
-				 struct sbi_trap_info *out_trap)
+				   unsigned long extid, unsigned long funcid,
+				   unsigned long *args, unsigned long *out_val,
+				   struct sbi_trap_info *out_trap)
 {
 	sbi_printf("[debug_handler] ############## DEBUG START ###########\n");
-	uintptr_t satp = csr_read(CSR_SATP);
+	uintptr_t satp	   = csr_read(CSR_SATP);
 	uintptr_t mxstatus = csr_read(CSR_MXSTATUS);
 
 	sbi_printf("satp = 0x%lx\n", satp);
 	sbi_printf("mxstatus = 0x%lx\n", mxstatus);
 
-	uintptr_t mask = ~(-1UL << 27);
+	uintptr_t mask	       = ~(-1UL << 27);
 	uintptr_t pte_ppn_mask = ~(-1UL << 44);
-	uintptr_t pt_root = (satp & mask) << 12;
+	uintptr_t pt_root      = (satp & mask) << 12;
 
-	uintptr_t root_pte = *(uintptr_t *)(pt_root);
-	uintptr_t first_page_table_addr = ((root_pte >> 10) & pte_ppn_mask) << 12;
+	uintptr_t root_pte		= *(uintptr_t *)(pt_root);
+	uintptr_t first_page_table_addr = ((root_pte >> 10) & pte_ppn_mask)
+					  << 12;
 
 	uintptr_t first_page_table_pte = *(uintptr_t *)first_page_table_addr;
-	uintptr_t second_page_table_addr = ((first_page_table_pte >> 10) & pte_ppn_mask) << 12;
+	uintptr_t second_page_table_addr =
+		((first_page_table_pte >> 10) & pte_ppn_mask) << 12;
 
 	sbi_printf("1st level pt @ 0x%lx\n", first_page_table_addr);
 	sbi_printf("2nd level pt @ 0x%lx\n", second_page_table_addr);

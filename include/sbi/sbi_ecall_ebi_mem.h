@@ -17,7 +17,7 @@
 
 // make sure these addresses are section aligned
 #define	MEMORY_POOL_START 0x60000000
-#define MEMORY_POOL_END	  0xB0000000
+#define MEMORY_POOL_END	  0xBF800000
 #define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
 				>> SECTION_SHIFT)
 

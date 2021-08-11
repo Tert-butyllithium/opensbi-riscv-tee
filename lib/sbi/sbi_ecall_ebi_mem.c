@@ -77,6 +77,28 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 	asm volatile (".long 0x01b0000b");
 }
 
+static uintptr_t alloc_section_for_linux()
+{
+	int i;
+	struct section* sec;
+
+	for_each_section_in_pool_rev(memory_pool, sec, i) {
+		if (sec->owner == 0)
+			continue;
+		
+		if (sec->owner > 0) {
+			struct section *migrate_to = find_avail_section();
+			section_migration(sec->sfn, migrate_to->sfn);
+		}
+
+		update_section_info(sec->sfn, 0, 0);
+		return sec->sfn << SECTION_SHIFT;
+	}
+
+	// should never reach here
+	return 0;
+}
+
 
 // eid: enclave id
 // va: the section will be linearly mapped to va
@@ -103,6 +125,10 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 	if (!sec) {
 		sbi_printf("[M mode alloc_section_for_enclave] OOM!\n");
 		return 0;
+	}
+
+	if (eid == 0) { // Linux
+		return alloc_section_for_linux();
 	}
 
 	// 1. Look for available sections adjacent to allocated

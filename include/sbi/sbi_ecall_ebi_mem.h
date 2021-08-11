@@ -16,8 +16,8 @@
 #define MASK_L2 0x7fc0000000
 
 // make sure these addresses are section aligned
-#define	MEMORY_POOL_START 0x48000000
-#define MEMORY_POOL_END	  0x70000000
+#define	MEMORY_POOL_START 0x60000000
+#define MEMORY_POOL_END	  0xB0000000
 #define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
 				>> SECTION_SHIFT)
 

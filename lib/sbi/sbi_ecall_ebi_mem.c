@@ -32,8 +32,6 @@ struct region {
 
 static struct section *find_avail_section(void);
 static void page_compaction();
-static uintptr_t find_lowest_avail();
-static uintptr_t find_highest_used();
 static struct region find_smallest_region(int eid);
 static struct region find_avail_region_larger_than(int length);
 static int get_avail_pmp_count(enclave_context *context);
@@ -77,6 +75,7 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 	asm volatile (".long 0x01b0000b");
 }
 
+// returns pa
 static uintptr_t alloc_section_for_linux()
 {
 	int i;
@@ -85,17 +84,16 @@ static uintptr_t alloc_section_for_linux()
 	for_each_section_in_pool_rev(memory_pool, sec, i) {
 		if (sec->owner == 0)
 			continue;
-		
-		if (sec->owner > 0) {
-			struct section *migrate_to = find_avail_section();
-			section_migration(sec->sfn, migrate_to->sfn);
-		}
-
-		update_section_info(sec->sfn, 0, 0);
-		return sec->sfn << SECTION_SHIFT;
+		else
+			break;
 	}
 
-	// should never reach here
+	if (sec->owner > 0)
+		page_compaction();
+	
+	if (sec->owner < 0)
+		return sec->sfn << SECTION_SHIFT;
+
 	return 0;
 }
 
@@ -191,50 +189,34 @@ found:
 
 static void page_compaction()
 {
-	uintptr_t lowest_avail_sfn = find_lowest_avail();
-	uintptr_t highest_used_sfn = find_highest_used();
-
-	if (!lowest_avail_sfn || !highest_used_sfn) {
-		sbi_printf("[M mode page_compaction] something goes wrong\n");
-		return;
-	}
-
-	while (lowest_avail_sfn < highest_used_sfn) {
-		section_migration(highest_used_sfn, lowest_avail_sfn);
-	
-		lowest_avail_sfn = find_lowest_avail();
-		highest_used_sfn = find_highest_used();
-	}
-	
-	return;
-}
-
-static uintptr_t find_lowest_avail()
-{
 	int i;
 	struct section *sec;
+	struct section *tmp;
+	int done = 1;
+
+	section_ownership_dump();
+
+	sbi_printf("[M mode page_compaction]\n");
 
 	for_each_section_in_pool(memory_pool, sec, i) {
+		done = 1;
 		if (sec->owner < 0) {
-			return sec->sfn;
+			for (int j = 1; i + j < MEMORY_POOL_SECTION_NUM; j++) {
+				tmp = sfn_to_section(sec->sfn + j);
+				if (tmp->owner > 0) {
+					section_migration(tmp->sfn, sec->sfn);
+					done = 0;
+					break;
+				}
+			}
+
+			if (done)
+				return;
+			
 		}
 	}
 
-	return 0;
-}
-
-static uintptr_t find_highest_used()
-{
-	int i;
-	struct section *sec;
-
-	for_each_section_in_pool_rev(memory_pool, sec, i) {
-		if (sec->owner > 0) { // 0 for Linux itself
-			return sec->sfn;
-		}
-	}
-
-	return 0;
+	section_ownership_dump();
 }
 
 static struct region find_avail_region_larger_than(int length)

@@ -15,36 +15,38 @@ drv_addr_t *drv_addr_list;
 
 uintptr_t init_usr_stack(uintptr_t usr_sp)
 {
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 12);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 11);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 18);
-	PUSH(usr_sp, 1);
-	PUSH(usr_sp, 13);
-	PUSH(usr_sp, 0xdeaddead);
-	PUSH(usr_sp, 25);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 23);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 31);
-	PUSH(usr_sp, EPAGE_SIZE);
-	PUSH(usr_sp, 6);
-	PUSH(usr_sp, 0);
-	PUSH(usr_sp, 32);
-	PUSH(usr_sp, 0x112d);
-	PUSH(usr_sp, 16);
+	for (int i = 0; i < 100; i++)
+		PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 12);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 11);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 18);
+// 	PUSH(usr_sp, 1);
+// 	PUSH(usr_sp, 13);
+// 	PUSH(usr_sp, 0xdeaddead);
+// 	PUSH(usr_sp, 25);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 23);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 31);
+// 	PUSH(usr_sp, EPAGE_SIZE);
+// 	PUSH(usr_sp, 6);
+// 	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 32);
+// 	PUSH(usr_sp, 0x112d);
+// 	PUSH(usr_sp, 16);
 
-	PUSH(usr_sp, 0);
+// 	PUSH(usr_sp, 0);
 
-	PUSH(usr_sp, 0x16);
-	PUSH(usr_sp, 0x39);
-	PUSH(usr_sp, 0x0);
+// 	PUSH(usr_sp, 0x16);
+// 	PUSH(usr_sp, 0x39);
+// 	PUSH(usr_sp, 0x0);
 
-	PUSH(usr_sp, 0x3);
+// 	PUSH(usr_sp, 0x3);
 	return usr_sp;
 }
 
@@ -55,19 +57,30 @@ void *memset(void *a, int b, size_t c)
 
 void init_other_driver()
 {
-	drv_initer local_init[64] = { init_console_driver };
-	//  init_rtc_driver};
 	// drv_initer local_init[64] = {0};
-	for (int i = 0; i < MAX_DRV; i++) {
-		if (local_init[i]) {
-			drv_init_list[i] = local_init[i];
-			peri_reg_list[i]	 = drv_init_list[i]();
-		}
-	}
+	// memset(local_init, 0, sizeof(local_init));
+	// // local_init[0] = init_console_driver;
+	// printd("[S mode init_other_driver] local_init @ %p\n",
+	// 		&local_init);
+	// for (int i = 0; i < MAX_DRV; i++) {
+	// 	printd("[S mode init_other_driver] local_init[%d]: %p\n", i, 
+	// 			local_init[i]);
+	// 	if (local_init[i]) {
+	// 		drv_init_list[i] = local_init[i];
+	// 		peri_reg_list[i] = drv_init_list[i]();
+	// 	}
+	// }
+	init_console_driver();
 }
 
-void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp)
-{
+
+void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
+	printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
+	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
+	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
+
+	loop_test();
+
 	init_other_driver();
 	// printd("[prepare_boot] 1\n");
 	/* allow S mode access U mode memory */

@@ -16,7 +16,7 @@
 #define DRV 1
 #define USR 0
 
-#define SECTION_SIZE EMEM_SIZE
+#define EMEM_SIZE SECTION_SIZE
 #define SECTION_UP(addr) (ROUND_UP(addr, SECTION_SIZE))
 #define SECTION_DOWN(addr) ((addr) & (~((SECTION_SIZE)-1)))
 

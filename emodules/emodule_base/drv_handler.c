@@ -8,7 +8,7 @@
 void handle_interrupt(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 		      uintptr_t stval)
 {
-
+	printd("[S mode handle_interrupt] start, scause = 0x%lx\n", scause);
 	// uintptr_t sip, sie;
 	switch (scause) {
 	case IRQ_S_TIMER:
@@ -22,6 +22,8 @@ void handle_interrupt(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 		clear_csr(sip, SIP_SSIP);
 		break;
 	case IRQ_S_EXT:
+		printd("[S mode handle_interrupt] IRQ_S_EXT\n", scause, sepc,
+		       stval);
 		clear_csr(sip, 1 << IRQ_S_EXT);
 		clear_csr(sie, 1 << IRQ_S_EXT);
 		break;
@@ -35,15 +37,18 @@ void handle_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 {
 	printd("handle exception %d 0x%llx  0x%llx!\n", scause, sepc, stval);
 	// SBI_CALL(EBI_EXIT, 0, 0, 0);
-	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_EXIT);
+	SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
 }
 
 void handle_syscall(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 		    uintptr_t stval)
 {
+	printd("[handle_syscall] start\n");
+	printd("[handle_syscall] sepc: 0x%lx\n", sepc);
+
 	uintptr_t sstatus = read_csr(sstatus);
-	sstatus |= SSTATUS_SUM;
-	write_csr(sstatus, sstatus);
+	// sstatus |= SSTATUS_SUM;
+	// write_csr(sstatus, sstatus);
 
 	if (scause != CAUSE_USER_ECALL) {
 		handle_exception(regs, scause, sepc, stval);
@@ -93,6 +98,7 @@ void handle_syscall(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 	// printd("[handle_syscall] before write to sstatus\n");
 	write_csr(sstatus, sstatus);
 	printd("[handle_syscall] after write to sstatus\n");
+	printd("[handle_syscall] end\n");
 	regs[A0_INDEX] = retval;
 }
 void unimplemented_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,

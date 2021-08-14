@@ -3,7 +3,7 @@
 #include "../drv_util.h"
 #include "../drv_mem.h"
 
-// #define EDRV_PA_START    0x40000000
+// #define ENC_PA_START    0x40000000
 #define EDRV_VA_START    0xC0000000
 #define EDRV_DRV_START   0xD0000000
 
@@ -20,7 +20,8 @@
 #define MASK_L2 0x7fc0000000
 
 // Pool size for page table itself
-#define PAGE_DIR_POOL 64 
+// NOTE: when modifying, modify sbi_ecall_ebi_mem.h at the same time!!!!!!!
+#define PAGE_DIR_POOL 256
 
 #ifndef __ASSEMBLER__
 
@@ -51,8 +52,8 @@ typedef struct trie {
 } trie;
 typedef pte page_directory[512];
 
-extern uintptr_t EDRV_PA_START;
-extern uintptr_t EDRV_VA_PA_OFFSET;
+extern uintptr_t ENC_PA_START;
+extern uintptr_t ENC_VA_PA_OFFSET;
 extern inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];
 
 void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages, uintptr_t attr);
@@ -61,9 +62,12 @@ uintptr_t alloc_page(pte *, uintptr_t, uintptr_t, uintptr_t, char);
 uintptr_t get_pa(uintptr_t);
 void print_pte(uintptr_t va);
 void test_va(uintptr_t va);
+void set_page_table_root(uintptr_t pt_root);
 uintptr_t get_page_table_root(void);
+uintptr_t get_page_table_root_pointer_addr();
+uintptr_t get_trie_root(); 
 void all_zero(void);
-void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
+inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
 void inverse_map_add_count(uintptr_t pa);
 void dump_inverse_map();
 

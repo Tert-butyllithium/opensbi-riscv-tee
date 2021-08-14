@@ -6,6 +6,7 @@
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_ecall_ebi_mem.h>
+#include "../../platform/thead/c910/platform.h"
 
 // #define MAX_PAGE 8192
 // static enclave_page_t pages[MAX_PAGE];
@@ -196,6 +197,10 @@ uintptr_t enclave_mem_free(enclave_context *context)
 {
 	int eid = context->id;
 
+	context->offset_addr		= 0;
+	context->pt_root_addr		= 0;
+	context->inverse_map_addr	= 0;
+
 	sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
 	free_section_for_enclave(eid);
 
@@ -243,7 +248,7 @@ void pmp_switch(enclave_context *context)
 	// 	     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
 }
 
-void pmp_allow_access(peri_addr_t* peri){
+void pmp_allow_access(peri_addr_t* peri) {
 	// __attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
 	// cfg = csr_read(CSR_PMPCFG0);
 	// p2 = peri->reg_pa_start >> PMP_SHIFT;
@@ -406,9 +411,13 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 	if (avail_id == EBI_ERROR)
 		return EBI_ERROR;
 	/* LOADED enclave, loaded not running */
-	context			  = &enclaves[avail_id];
-	context->status = ENC_LOAD;
-	context->id = avail_id;
+	context			= &enclaves[avail_id];
+	context->status 	= ENC_LOAD;
+	context->id		= avail_id;
+	context->pa		= 0;
+	context->pt_root_addr	= 0;
+	context->offset_addr	= 0;
+	context->inverse_map_addr = 0;
 	
 	sbi_printf("[create_enclave] log2: enclave id: %lx\n", context->id);
 
@@ -481,6 +490,8 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 
 	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
 	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",into->drv_list);
+
+
 
 	regs->a0 = id;
 	regs->a1 = id;

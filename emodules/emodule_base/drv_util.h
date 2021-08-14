@@ -37,4 +37,7 @@ void *my_memset(void *s, int c, unsigned int n);
 // void show_reg(uintptr_t *regs);
 void show_reg();
 void print_color(const char* s);
+void flush_dcache_range(unsigned long start, unsigned long end);
+void invalidate_dcache_range(unsigned long start, unsigned long end);
+void flush_tlb_range(unsigned long start, unsigned long end);
 #endif

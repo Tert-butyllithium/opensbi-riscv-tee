@@ -11,21 +11,22 @@
 #define printd printf
 #endif
 
+// static page_directory page_directory_pool[PAGE_DIR_POOL];
+static uintptr_t page_directory_pool; // always store pa in
+// static uintptr_t address_trie; // always store pa
 
-static page_directory page_directory_pool[PAGE_DIR_POOL] __attribute__((section(".page_table")));
-static trie address_trie __attribute__((section(".page_table_trie")));
-
-uintptr_t EDRV_PA_START;// __attribute__((section(".page_table_trie")));
-uintptr_t EDRV_VA_PA_OFFSET;// __attribute__((section(".page_table_trie")));
-inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];// __attribute__((section(".page_table_trie")));
+uintptr_t ENC_PA_START;
+uintptr_t ENC_VA_PA_OFFSET;
+inverse_map inv_map[INVERSE_MAP_ENTRY_NUM];
 
 #define DEBUG_CONDITION(cond) int debug = (cond) ? 1 : 0;
 #define DEBUG if (debug)
 
 // accessible addr to pa
-static uintptr_t acce_to_phys(uintptr_t acce_addr)
+static inline uintptr_t acce_to_phys(uintptr_t acce_addr)
 {
-	return read_csr(satp) ? get_pa(acce_addr) : acce_addr;
+	// return read_csr(satp) ? get_pa(acce_addr) : acce_addr;
+	return read_csr(satp) ? (acce_addr - ENC_VA_PA_OFFSET) : acce_addr;
 }
 
 /**
@@ -39,9 +40,10 @@ static uintptr_t acce_to_phys(uintptr_t acce_addr)
  */
 static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 				    const uintptr_t pa, const int len,
-				    const int attr)
+				    const uintptr_t attr)
 {
 	uint32_t p = 0, i = 0;
+	page_directory *page_table = (page_directory *)get_page_table_root();
 	/*
      * [L2, L1, L0] PPN for each level, used fot trie to get offset of 
      * page_directory_pool
@@ -59,20 +61,21 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 			t->next[p][l[i]] = ++t->cnt;
 			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
 
-			tmp_pte = &page_directory_pool[p][l[i]];
-			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_directory_pool[t->cnt][0]) >> 12;
+			tmp_pte = &page_table[p][l[i]];
+			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_table[t->cnt][0]) >> 12;
 			tmp_pte->pte_v = 1;
 		}
 
 		p = t->next[p][l[i]];
 	}
 	// set items for the leaf page table entry
-	tmp_pte	     = &page_directory_pool[p][l[len - 1]];
+	tmp_pte	     = &page_table[p][l[len - 1]];
 	tmp_pte->ppn = pa >> 12;
 	if (len == 2) {
 		tmp_pte->ppn = (tmp_pte->ppn | MASK_OFFSET) ^ MASK_OFFSET;
 	}
 	tmp_pte->pte_v = tmp_pte->pte_g = 1;
+	// tmp_pte->pte_v = 1;
 	if(attr & PTE_U){
 		tmp_pte->pte_u = 1;
 	}
@@ -85,24 +88,54 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	if(attr & PTE_X){
 		tmp_pte->pte_x = 1;
 	}
-	if (read_csr(satp)) {
-		flush_tlb();
-	}
 
 	return *((uintptr_t *)tmp_pte);
 }
 
 static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
-				       int attr)
+				       uintptr_t attr)
 {
-	uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
+	// uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
+						//     levels, attr);
+	trie *t = (trie *)get_trie_root();
+	uintptr_t p = (uintptr_t)trie_get_or_insert(t, va, pa,
 						    levels, attr);
 	return p;
 }
 
-uintptr_t get_page_table_root()
+void set_page_table_root(uintptr_t pt_root) // should only be invoked before mmu enabled
 {
-	return (uintptr_t)&page_directory_pool[0][0];
+	page_directory_pool = pt_root;
+}
+
+inline uintptr_t get_page_table_root() // returns accessible addr
+{
+	// printd("[S mode get_page_table_root] satp = 0x%lx\n", read_csr(satp));
+	return page_directory_pool + va_pa_offset();
+}
+
+// returns accessible value; trie is always right behind the page table
+inline uintptr_t get_trie_root()
+{
+	return get_page_table_root() + EPAGE_SIZE * PAGE_DIR_POOL;
+}
+
+uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mmu enabled
+{
+	return (uintptr_t)&page_directory_pool;
+}
+
+static inline void flush_page_table_cache_and_tlb()
+{
+	uintptr_t pt_root = page_directory_pool;
+	flush_dcache_range(pt_root,
+				pt_root + PAGE_DIR_POOL * EPAGE_SIZE
+				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // flush does not work, why?
+	// invalidate_dcache_range(pt_root,
+	// 			pt_root + PAGE_DIR_POOL * EPAGE_SIZE
+	// 			+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
+	// asm volatile("fence rw, rw");
+	flush_tlb();
 }
 
 void print_pte(uintptr_t va){
@@ -151,7 +184,7 @@ uintptr_t get_pa(uintptr_t va)
 	int i = 0;
 	while (1) {
 		// printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n",
-			// i, root, EDRV_VA_PA_OFFSET);
+			// i, root, ENC_VA_PA_OFFSET);
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			printd("ERROR: va:0x%lx is not valid!!!\n", va);
@@ -160,7 +193,10 @@ uintptr_t get_pa(uintptr_t va)
 		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
 			break;
 		}
+		// printd("[S mode get_pa] pte = 0x%lx\n", *(uintptr_t *)&tmp_entry);
+		// printd("[S mode get_pa] offset = 0x%lx\n", va_pa_offset());
 		tmp  = tmp_entry.ppn << 12;
+		// printd("[S mode get_pa] tmp = 0x%lx\n", tmp);
 		root = (pte *)(tmp + va_pa_offset());
 		i++;
 	}
@@ -189,9 +225,7 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	pte *pt;
 	char is_text = 0;
 
-	printd("[S mode map_page] va = 0x%lx pa = 0x%lx n = %d\n",va,pa,n_pages);
-	
-	if (va <= 0x100000)
+	if (va <= 0x100000) // to be modified: used by load_elf
 		is_text = 1;
 	if (is_text) {
 		insert_inverse_map(pa, va, n_pages);
@@ -213,14 +247,18 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 		n_pages--;
 	}
 
+	if (read_csr(satp)) {
+		flush_page_table_cache_and_tlb();
+	}
 }
 
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
 	static uintptr_t drv_addr_alloc = 0;
-	printd("current root address: %p\n",get_page_table_root());
+	printd("[S mode ioremap] current root address: 0x%lx\n",
+		get_page_table_root());
 	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
-	map_page(root,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
+	map_page(NULL,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
 	uintptr_t cur_addr =  EDRV_DRV_START;
 	drv_addr_alloc += n_pages << 12;
@@ -232,14 +270,24 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 {
 	pte *pt;
 	uintptr_t pa, prev_pa = 0, base_pa = 0;
+	inverse_map *inv_map_entry;
 
+	printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
+			va, n_pages);
 	while (n_pages >= 1) {
-		pa = spa_get_pa_zero(id);
+		// pa = spa_get_pa_zero(id);
+		pa = spa_get_pa(id);
 		if (pa == prev_pa + EPAGE_SIZE
 		&& SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
-			inverse_map_add_count(base_pa);
+			// inverse_map_add_count(base_pa);
+			inv_map_entry->count++;
 		} else {
-			insert_inverse_map(pa, va, 1);
+			inv_map_entry = insert_inverse_map(pa, va, 1);
+			if (!inv_map_entry) {
+				printd("[S mode alloc_page] ERROR!\n");
+				return 0;
+			}
+
 			base_pa = pa;
 		}
 		// printd("[S mode alloc_page] va: 0x%lx, pa: 0x%lx\n", va, pa);
@@ -251,6 +299,10 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 
 	dump_inverse_map();
 
+	if (read_csr(satp)) {
+		flush_page_table_cache_and_tlb();
+	}
+
 	return pa;
 }
 
@@ -258,9 +310,10 @@ void all_zero()
 {
 	int i, j;
 	pte *tmp_pte;
+	page_directory *page_table = (page_directory *)get_page_table_root();
 	for (i = 0; i < 64; i++) {
 		for (j = 0; j < 512; j++) {
-			tmp_pte = &page_directory_pool[i][j];
+			tmp_pte = &page_table[i][j];
 			if (*((uintptr_t *)tmp_pte)) {
 				printd("!!!!!!! %d:%d not zero\n", i, j);
 			}
@@ -272,7 +325,8 @@ void all_zero()
 // look up pa first. if pa exists in the table, update it; otherwise
 // insert a new entry
 // when updating, count must match with the previous count
-void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
+// returns the newly inserted entry
+inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 {
 	int i = 0;
 
@@ -290,14 +344,14 @@ void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 					"ERROR: count does not match! "
 					"original count: %d\n", inv_map[i].count);
 				while(1);
-				return;
+				return NULL;
 			}
 			inv_map[i].va = va;
 		}
 	}
 	if (i == INVERSE_MAP_ENTRY_NUM) { // out of entry
 		printd("[s mode insert_inverse_map] NO ENOUGH ENTRY!!!\n");
-		return;
+		return NULL;
 	}
 
 	// new entry
@@ -305,6 +359,8 @@ void insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 	inv_map[i].va = va;
 	inv_map[i].count = count;
 	printd("[s mode insert_inverse_map] new entry\n");
+
+	return &inv_map[i];
 }
 
 void inverse_map_add_count(uintptr_t pa)

@@ -9,8 +9,6 @@
 #define DRV_CONSOLE 0
 #define DRV_RTC 1
 
-typedef drv_ctrl_t *(*drv_initer)();
-
 typedef drv_ctrl_t* (*drv_initer) ();
 
 extern drv_ctrl_t* peri_reg_list[MAX_DRV];

@@ -28,7 +28,7 @@ drv_ctrl_t* init_console_driver() {
     // n_console_drv_pages = (PAGE_UP(console_drv_size)) >> EPAGE_SHIFT;
     // printd("[init_console_driver] drv_size: 0x%lx, n_console_drv_pages: 0x%lx at %p\n",console_drv_size, n_console_drv_pages, &n_console_drv_pages);
  
-    // map_page((pte *)pt_root, drv_console_start, drv_console_start - EDRV_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
+    // map_page((pte *)pt_root, drv_console_start, drv_console_start - ENC_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
     // printd("[init_console_driver] after map_page\n");
     
     console_handler = (cmd_handler)drv_console_start;
@@ -37,7 +37,7 @@ drv_ctrl_t* init_console_driver() {
     // printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
     
     // console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
-    console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, 1024);
+    console_va = ioremap(NULL, console_ctrl->reg_addr, 1024);
     SBI_CALL5(0x19260817, console_ctrl->reg_addr, console_va,
 	      PAGE_UP(console_ctrl->reg_size), 420);
     // console_va = 0xd0000000;
@@ -61,7 +61,7 @@ drv_ctrl_t* init_console_driver() {
 
 //     uintptr_t drv_rtc_size = drv_rtc_end - drv_rtc_start;
 //     size_t n_drv_rtc_pages = (PAGE_UP(drv_rtc_size)) >> EPAGE_SHIFT;
-//     map_page((pte *)pt_root, drv_rtc_start, drv_rtc_start - EDRV_VA_PA_OFFSET, n_drv_rtc_pages, PTE_V | PTE_X | PTE_W | PTE_R);
+//     map_page((pte *)pt_root, drv_rtc_start, drv_rtc_start - ENC_VA_PA_OFFSET, n_drv_rtc_pages, PTE_V | PTE_X | PTE_W | PTE_R);
 
 //     cmd_handler rtc_handler = (cmd_handler)drv_rtc_start;
 

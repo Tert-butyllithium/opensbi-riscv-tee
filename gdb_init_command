@@ -1,0 +1,2 @@
+add-symbol-file build/platform/qemu/virt/firmware/fw_jump.elf
+add-symbol-file emodules/emodule_base/emodule_base.bin

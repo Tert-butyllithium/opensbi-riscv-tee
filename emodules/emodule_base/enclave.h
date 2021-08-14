@@ -255,6 +255,9 @@ static inline void flush_tlb()
 #define PTE_D     0x080 // Dirty
 #define PTE_SOFT  0x300 // Reserved for Software
 
+#define PTE_C_SHIFT 62
+#define PTE_C     (1UL << PTE_C_SHIFT) // Cacheable
+
 #define PTE_PPN_SHIFT 10
 
 #define PTE_TABLE(PTE) (((PTE) & (PTE_V | PTE_R | PTE_W | PTE_X)) == PTE_V)

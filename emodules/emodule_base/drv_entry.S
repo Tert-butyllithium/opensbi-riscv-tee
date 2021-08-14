@@ -105,7 +105,7 @@ ret_to_usr:
 
     RESTORE_CONTEXT
     csrrw   sp, sscratch, sp
-    jal     log
+    # jal     log
     sret
 
     .align 4
@@ -128,6 +128,8 @@ _start:
 .align 2
 2:
     sfence.vma
+    # fence.i
+    # icache.iall
 
     /* switch to trap handler */
     la      s7, trap_handler

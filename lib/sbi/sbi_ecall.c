@@ -98,10 +98,11 @@ int sbi_ecall_handler(u32 hartid, ulong mcause, struct sbi_trap_regs *regs,
 		sbi_printf(
 			"[sbi_ecall_handler] count = %d, a5 is set to 0x%lx, a6 == %lu, a7 == SBI_EXT_EBI\n",
 			count_ebi, regs->a5, func_id);
+		sbi_printf("[sbi_ecall_handler] mepc = 0x%lx\n", regs->mepc);
 	}
 
 	// The ecall is a syscall if it is from U-mode but a7 is not SBI_EXT_EBI
-	if (prev_mode == 0 && regs->a7 != SBI_EXT_EBI) {
+	if (prev_mode == 0 && regs->a7 != SBI_EXT_EBI && regs->a7 != SBI_EXT_DEBUG) {
 		trap.epc   = regs->mepc;
 		trap.cause = mcause;
 		trap.tval  = mtval;

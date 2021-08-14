@@ -114,10 +114,10 @@
 #define EPPN_SHIFT(level) (EPAGE_SHIFT + (level)*EPT_LEVEL_BITS)
 
 #define EPPN(addr, level) \
-	(((addr) >> EPPN_SHIFT(level)) & ((1 << EPT_LEVEL_BITS) - 1))
+        (((addr) >> EPPN_SHIFT(level)) & ((1 << EPT_LEVEL_BITS) - 1))
 
 #define EDRV_VA_START 0xC0000000
-#define EMEM_SIZE 0x800000
+#define EMEM_SIZE SECTION_SIZE 
 #define EDRV_MEM_SIZE 0x200000
 #define EDRV_STACK_SIZE 0x8000
 #define EUSR_MEM_SIZE (EMEM_SIZE - EDRV_MEM_SIZE)
@@ -127,8 +127,8 @@
 #define PAGE_UP(addr) (ROUND_UP(addr, EPAGE_SIZE))
 #define PAGE_DOWN(addr) ((addr) & (~((EPAGE_SIZE)-1)))
 
-#define NUM_OF_PAGE(size) \
-	(((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))
+#define NUM_OF_PAGE(size)	\
+        (((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))
 
 #define PERI_NUM_MAX 128
 
@@ -219,7 +219,6 @@ typedef struct pte {
     uintptr_t ppn: 44;
     uintptr_t __unused_value: 10;
 } pte;
-
 void enclave_mem_init(void);
 uintptr_t enclave_mem_alloc(enclave_context *context, size_t enclave_size);
 uintptr_t enclave_mem_free(enclave_context *context);

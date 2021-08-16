@@ -7,12 +7,14 @@
 #include "mm/drv_page_pool.h"
 #include "mm/page_table.h"
 #include "drv_util.h"
+#include "sha3.h"
 /* Each Eapp has their own program break */
 uintptr_t prog_brk;
 uintptr_t drv_start_va;
 uintptr_t va_top;
 
 #define __pa(x) get_pa(x + ENC_VA_PA_OFFSET)
+#define SHA3_LEN 256
 
 static inline void page_map_register()
 {
@@ -31,6 +33,9 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 		ENC_PA_START; // should be updated when base is migrated
 	va_top =
 		EDRV_VA_START; // will increase by EMEM_SIZE after spa_init inside init_mem
+    
+    uint8_t sha3sum[SHA3_LEN];
+    sha3((void *)mem_start, usr_size, sha3sum, SHA3_LEN);
 
 	enclave_id = id;
 

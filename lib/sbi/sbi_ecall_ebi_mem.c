@@ -129,6 +129,10 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 		return alloc_section_for_linux();
 	}
 
+	if (eid == 0) { // Linux
+		return alloc_section_for_linux();
+	}
+
 	// 1. Look for available sections adjacent to allocated
 	//    sections owned by the enclave. If found, update PMP config
 	//    and return the pa of the section

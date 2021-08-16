@@ -46,12 +46,13 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     ENC_VA_PA_OFFSET = EDRV_VA_START - ENC_PA_START; // should be updated when base is migrated
     va_top = EDRV_VA_START; // will increase by EMEM_SIZE after spa_init inside init_mem
     
-    uint8_t * sha3sum[SHA3_LEN];
-    sha3(sha3sum, SHA3_LEN, (void *)mem_start, usr_size);
-    printd("[S mode init_mem] SHA3 checksum:\n");
-    for (int i = 0; i < SHA3_LEN; i += 8) {
-        printd("%8lx%8lx%8lx%8lx%8lx%8lx%8lx%8lx\n", sha3sum[i], sha3sum[i+1], sha3sum[i+2], sha3sum[i+3], sha3sum[i+4], sha3sum[i+5], sha3sum[i+6], sha3sum[i+7]);
-    }
+    uint8_t sha3sum[SHA3_LEN];
+    sha3((void *)mem_start, usr_size, sha3sum, SHA3_LEN);
+    // for (int i = 0; i < SHA3_LEN; i += 8) {
+    //     printd("%02x%02x%02x%02x%02x%02x%02x%02x\n",
+    //         sha3sum[i], sha3sum[i+1], sha3sum[i+2], sha3sum[i+3],
+    //         sha3sum[i+4], sha3sum[i+5], sha3sum[i+6], sha3sum[i+7]);
+    // }
 
     printd("[S mode init_mem] id = %d\n", id);
     printd("[S mode init_mem] mem_start = 0x%lx\n", mem_start);

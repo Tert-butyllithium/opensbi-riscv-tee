@@ -4,8 +4,8 @@ OBJCOPY = ../../../tools/toolchain/riscv64-glibc-gcc-thead_20200702/bin/riscv64-
 CFLAGS = -nostdlib -static -mcmodel=medany -Werror -g
 
 link_script = drv_base.lds
-headers = drv_base.h drv_elf.h drv_handler.h drv_list.h drv_mem.h drv_syscall.h drv_util.h sha3.h mm/*.h
-src = drv_base.c drv_elf.c drv_handler.c drv_list.c drv_mem.c drv_syscall.c drv_util.c drv_entry.S sha3.c mm/*.c 
+headers = drv_base.h drv_elf.h drv_handler.h drv_list.h drv_mem.h drv_syscall.h drv_util.h mm/*.h md2.h
+src = drv_base.c drv_elf.c drv_handler.c drv_list.c drv_mem.c drv_syscall.c drv_util.c drv_entry.S mm/*.c md2.c
 
 target_dir = ../../firmware
 

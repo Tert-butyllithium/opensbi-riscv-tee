@@ -5,6 +5,7 @@
 // Revised 03-Sep-15 for portability + OpenSSL - style API
 
 #include "sha3.h"
+#include "drv_util.h"
 
 __attribute__((unused)) static void* memcpy(void *dest, const void *src, size_t count)
 {
@@ -162,9 +163,16 @@ void *sha3(const void *in, size_t inlen, void *md, int mdlen)
 {
     sha3_ctx_t sha3;
 
+    unsigned long cycle1 = read_csr(cycle);
+
     sha3_init(&sha3, mdlen);
     sha3_update(&sha3, in, inlen);
     sha3_final(md, &sha3);
+
+    unsigned long cycle2 = read_csr(cycle);
+    unsigned long cycle = cycle2 - cycle1;
+
+    printd("%ld    ", cycle);
 
     return md;
 }

@@ -70,16 +70,16 @@ int ebi_close(uintptr_t fd)
 
 int ebi_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-	// if (!drv_list[DRV_RTC]) return ERR_DRV_NOT_FND;
-	// if (!tv) return EFAULT;
+	if (drv_addr_list[DRV_RTC].drv_start == 0) return ERR_DRV_NOT_FND;
+	if (!tv) return EFAULT;
 
-	// cmd_handler rtc_handler = (cmd_handler)drv_addr_list[DRV_RTC].drv_start;
+	cmd_handler rtc_handler = (cmd_handler)drv_addr_list[DRV_RTC].drv_start;
 
-	// // uintptr_t time = rtc_handler(RTC_CMD_GET_TIME, 0, 0, 0);
-	// tv->tv_sec = time / 1000000000;
-	// tv->tv_usec = (time % 1000000000) / 1000; //  microsecond (μs)
+	uintptr_t time = rtc_handler(1, 0, 0, 0);
+	tv->tv_sec = time / 1000000000;
+	tv->tv_usec = (time % 1000000000) / 1000; //  microsecond (μs)
 
-	// printd("***** gettimeofday: second: %ld, microsecond: %ld *****\n", tv->tv_sec, tv->tv_usec);
+	printd("***** gettimeofday: second: %ld, microsecond: %ld *****\n", tv->tv_sec, tv->tv_usec);
 
 	return 0;
 }

@@ -139,12 +139,18 @@
 #include <sbi/riscv_atomic.h>
 #include <sbi/sbi_trap.h>
 
+typedef struct {
+    uintptr_t reg_addr;
+    uintptr_t reg_size;
+    int pri_using_by;
+}drv_ctrl_t; 
+
 typedef struct
 {
-  uintptr_t reg_pa_start;
+  // uintptr_t reg_pa_start;
   uintptr_t reg_va_start;
-  uintptr_t reg_size;
-  int using_by;
+  drv_ctrl_t* drv_info;
+  // uintptr_t reg_size;
 } peri_addr_t;
 
 typedef struct {
@@ -191,6 +197,7 @@ void pmp_update(enclave_context *context);
 extern uintptr_t create_enclave(uintptr_t* args, uintptr_t mepc);
 extern uintptr_t enter_enclave(uintptr_t* args, uintptr_t mepc);
 extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
+extern void peri_clear(int eid);
 extern uintptr_t suspend_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 extern void init_enclaves(void);
@@ -232,10 +239,7 @@ uintptr_t enclave_mem_free(enclave_context* context);
 
 
 typedef uintptr_t (*cmd_handler)(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1, uintptr_t arg2);
-typedef struct {
-    uintptr_t reg_addr;
-    uintptr_t reg_size;
-}drv_ctrl_t; 
+
 typedef struct 
 {
     uintptr_t drv_start;
@@ -260,7 +264,7 @@ uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask);
 char drvfetch(int drv_id, int enclave_id);
 void drvrelease(int drv_id, int enclave_id);
 void inform_peri(struct sbi_trap_regs *regs);
-void pmp_allow_access(peri_addr_t* peri);
+void pmp_allow_access(drv_ctrl_t* peri);
 void pmp_allow_region(uintptr_t pa, uintptr_t size);
 
 // Currently, interrupts are always disabled in M-mode.

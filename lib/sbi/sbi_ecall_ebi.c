@@ -40,12 +40,12 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 
     case SBI_EXT_EBI_EXIT:
         exit_enclave(regs);
-        // peri_clear(eid);
+        peri_clear(eid);
 	    return ret;
     
     case SBI_EXT_EBI_SUSPEND:
         // suspend_enclave(eid, regs, mepc);
-        // peri_clear(eid);
+        peri_clear(eid);
         return ret;
     
     case SBI_EXT_EBI_RESUME:

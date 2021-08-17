@@ -215,11 +215,16 @@ void pmp_switch(enclave_context *context)
 
 	} else {
 		// Switch to some enclave
-		p6 = 0UL >> PMP_SHIFT;
-		p7 = -1UL >> PMP_SHIFT;
+		// p6 = 0UL >> PMP_SHIFT;
+		// p7 = -1UL >> PMP_SHIFT;
+
+		p4 = context->pa >> PMP_SHIFT;
+ 		p5 = (context->pa + context->mem_size) >> PMP_SHIFT;
+ 		cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
+
 		// p6 = context->pa >> PMP_SHIFT;
 		// p7 = (context->pa + context->mem_size) >> PMP_SHIFT;
-		cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
+		// cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
 		sbi_printf("[m mode pmp_switch] p6 = 0x%lx, p7 = 0x%lx, cfg = 0x%lx\n",
 			p6, p7, cfg);
 	}
@@ -237,11 +242,11 @@ void pmp_switch(enclave_context *context)
 		     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
 }
 
-void pmp_allow_access(peri_addr_t* peri){
+void pmp_allow_access(drv_ctrl_t* peri){
 	__attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
 	cfg = csr_read(CSR_PMPCFG0);
-	p2 = peri->reg_pa_start >> PMP_SHIFT;
-	p3 = (peri->reg_pa_start + peri->reg_size) >> PMP_SHIFT;
+	p2 = peri->reg_addr >> PMP_SHIFT;
+	p3 = (peri->reg_addr + peri->reg_size) >> PMP_SHIFT;
 	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
 	sbi_printf("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
 
@@ -510,18 +515,46 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	return EBI_OK;
 }
 
+
+drv_ctrl_t drv_peri_regs[MAX_DRV] = {
+	{ 0x02500000, 4096, -1 },
+	{ 0x07090000, 4096, -1}
+};
+
+
+void peri_clear(int eid){
+	int i;
+	enclave_context* current_enclave = &enclaves[eid];
+
+	sbi_printf("peripheral list clear... cnt = %d\n",current_enclave->peri_cnt);
+	for(i=0; i < current_enclave->peri_cnt; i++){
+		sbi_printf("[peri_clear] driver: 0x%lx no longer used\n",current_enclave->peri_list[i].drv_info->reg_addr);
+		current_enclave->peri_list[i].drv_info->pri_using_by = -1;
+	} 
+	current_enclave->id = -1;
+	current_enclave->peri_cnt = 0;
+}
+
 void inform_peri(struct sbi_trap_regs *regs){
 	int hartid		 = sbi_current_hartid();
 	enclave_context *current_enclave = &enclaves[enclave_on_core[hartid]];
 	uintptr_t pa		 = regs->a0;
 	uintptr_t va		 = regs->a1;
-	uintptr_t sz		 = regs->a2;
-	current_enclave->peri_list[current_enclave->peri_cnt].reg_pa_start = pa;
+	// uintptr_t sz		 = regs->a2;
+	int i;
 	current_enclave->peri_list[current_enclave->peri_cnt].reg_va_start = va;
-	current_enclave->peri_list[current_enclave->peri_cnt].reg_size = sz;
+	
+	for( i=0; i < MAX_DRV; i++){
+		if(drv_peri_regs[i].reg_addr == pa){
+			current_enclave->peri_list[current_enclave->peri_cnt].drv_info = &drv_peri_regs[i];
+			break;
+		}
+	}
+
+	// current_enclave->peri_list[current_enclave->peri_cnt].reg_pa_start = pa;
+	// current_enclave->peri_list[current_enclave->peri_cnt].reg_size = sz;
 	current_enclave->peri_cnt++;
 }
-
 // TODO: actually pause/resume can replace enter/exit
 // NOTE: remember to update the `enclave_on_core`
 /* pause an enclave, do not take care of ret */
@@ -571,10 +604,10 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs)
 }
 
 extern char _console_start, _console_end;
-// extern char _drv_rtc_start, _drv_rtc_end;
+extern char _rtc_start, _rtc_end;
 drv_addr_t bbl_addr_list[MAX_DRV] = {
-    {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1}
-//     {(uintptr_t)&_drv_rtc_start, (uintptr_t)&_drv_rtc_end, -1}
+    {(uintptr_t)&_console_start, (uintptr_t)&_console_end, -1},
+    {(uintptr_t)&_rtc_start, (uintptr_t)&_rtc_end, -1}
 };
 
 

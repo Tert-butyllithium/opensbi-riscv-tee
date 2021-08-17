@@ -93,4 +93,8 @@
 		*(.drvconsole)
 	}
 
-	
+	.drvrtc :
+	{
+		*(.drvrtc)
+	}
+

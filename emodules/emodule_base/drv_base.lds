@@ -74,6 +74,13 @@ SECTIONS
   }
   _drv_console_end = .;
 
+  _drv_rtc_start = .;
+  .drv_enclave_rtc :
+  {
+    *(.drv_enclave_rtc)
+  }
+  _drv_rtc_end = .;
+
   _end = .;
   . = ALIGN(0x1000);
 

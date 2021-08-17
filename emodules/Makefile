@@ -1,4 +1,4 @@
-SUBDIRS := drv_console emodule_base
+SUBDIRS := drv_console drv_rtc emodule_base
 
 .PHONY: all clean
 

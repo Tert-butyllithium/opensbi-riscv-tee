@@ -651,7 +651,7 @@ _reset_regs:
 
   .section ".drvbase","a",@progbits
 
-.align 19
+.align 14
 
   .globl _base_start, _base_end
 _base_start:
@@ -659,9 +659,17 @@ _base_start:
 _base_end:
 
   .section ".drvconsole","a",@progbits
-.align 19
+.align 14
 
   .globl _console_start, _console_end
 _console_start:
   .incbin "drv_console"
 _console_end:
+
+  .section ".drvrtc","a",@progbits
+.align 14
+
+  .globl _rtc_start, _rtc_end
+_rtc_start:
+  .incbin "drv_rtc"
+_rtc_end:

@@ -33,6 +33,7 @@ void init_other_driver()
 	//     }
 	// }
 	peri_reg_list[0] = init_console_driver();
+	peri_reg_list[1] = init_rtc_driver();
 }
 
 #define SBI_ECALL(__num, __a0, __a1, __a2)                                    \

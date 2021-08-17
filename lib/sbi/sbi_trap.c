@@ -90,7 +90,7 @@ peri_addr_t *pmp_exception_handle(uintptr_t addr, uint32_t hartid)
 				//    context->peri_list[i].reg_size);
 		if (addr >= context->peri_list[i].reg_va_start &&
 		    addr < context->peri_list[i].reg_va_start +
-				    context->peri_list[i].reg_size) {
+				    context->peri_list[i].drv_info->reg_size) {
 			return &context->peri_list[i];
 		}
 	}
@@ -324,12 +324,14 @@ void sbi_trap_handler(struct sbi_trap_regs *regs, struct sbi_scratch *scratch)
 		}
 		if ((pmp_test = pmp_exception_handle(csr_read(CSR_STVAL),
 						     hartid)) != NULL) {
-			while (pmp_test->using_by >=1)
-			{
-				;
-				/* code */
-			}
-			pmp_allow_access(pmp_test);
+			// while (pmp_test->drv_info->pri_using_by >=1)
+			// {
+			// 	;
+			// 	/* code */
+			// }
+			pmp_test->drv_info->pri_using_by = enclave_on_core[hartid];
+			pmp_allow_access(pmp_test->drv_info);
+			sbi_printf("[PMP ALLOW] Allow enclave %d access 0x%lx\n", enclave_on_core[hartid], pmp_test->drv_info->reg_addr);
 			regs->mepc = csr_read(CSR_MEPC);
 			// regs->mstatus &= ~ (3 << MSTATUS_MPP_SHIFT);
 			break;

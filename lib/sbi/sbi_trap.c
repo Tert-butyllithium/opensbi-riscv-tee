@@ -331,7 +331,7 @@ void sbi_trap_handler(struct sbi_trap_regs *regs, struct sbi_scratch *scratch)
 			// }
 			pmp_test->drv_info->pri_using_by = enclave_on_core[hartid];
 			pmp_allow_access(pmp_test->drv_info);
-			sbi_printf("[PMP ALLOW] Allow enclave %d access 0x%lx\n", enclave_on_core[hartid], pmp_test->drv_info->reg_addr);
+			// sbi_printf("[PMP ALLOW] Allow enclave %d access 0x%lx\n", enclave_on_core[hartid], pmp_test->drv_info->reg_addr);
 			regs->mepc = csr_read(CSR_MEPC);
 			// regs->mstatus &= ~ (3 << MSTATUS_MPP_SHIFT);
 			break;

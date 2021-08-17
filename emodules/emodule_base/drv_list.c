@@ -36,17 +36,17 @@ drv_ctrl_t* init_rtc_driver() {
     cmd_handler rtc_handler = (cmd_handler) drv_addr_list[DRV_RTC].drv_start;
 
     drv_ctrl_t* rtc_ctrl = (drv_ctrl_t*)rtc_handler(QUERY_INFO, 0, 0, 0);
-    printd("RTC reg phy addr: %x\n", rtc_ctrl->reg_addr);
+    // printd("RTC reg phy addr: %x\n", rtc_ctrl->reg_addr);
     uintptr_t rtc_reg_va = ioremap(NULL, rtc_ctrl->reg_addr, rtc_ctrl->reg_size);
 
 	SBI_CALL5(0x19260817, rtc_ctrl->reg_addr, rtc_reg_va,
 		  PAGE_UP(rtc_ctrl->reg_size), 420);
 
-    printd("RTC reg vir addr: %x\n", rtc_reg_va);
+    // printd("RTC reg vir addr: %x\n", rtc_reg_va);
 
     rtc_handler(RTC_CMD_INIT, rtc_reg_va, 0, 0);
-    uintptr_t init_time = rtc_handler(RTC_CMD_GET, 0, 0, 0);
-    printd("RTC time: %lld\n", init_time);
+    // uintptr_t init_time = rtc_handler(RTC_CMD_GET, 0, 0, 0);
+    // printd("RTC time: %lld\n", init_time);
 
     // for (uintptr_t time = rtc_handler(RTC_CMD_GET_TIME, 0, 0, 0) / 1000000000;
     //      (time - init_time / 1000000000) < 3;

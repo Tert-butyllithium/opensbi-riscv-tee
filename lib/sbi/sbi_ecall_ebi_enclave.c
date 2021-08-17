@@ -34,6 +34,12 @@ void poweroff(uint16_t code)
 
 #define assert(x) ({ if (!(x)) die("assertion failed: %s", #x); })
 #define die(str, ...) ({ sbi_printf("%s:%d: " str "\n", __FILE__, __LINE__, ##__VA_ARGS__); poweroff(-1); })
+#define _DEBUG 0
+#if _DEBUG
+#define debug(str, ...) sbi_printf(str, ##__VA_ARGS__)
+#else
+#define debug(str, ...)
+#endif
 
 int memset() {
 	return -1;
@@ -201,7 +207,7 @@ int enclave_on_core[NUM_CORES];
 
 void pmp_switch(enclave_context *context)
 {
-	sbi_printf("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
+	debug("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
 	uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0, cfg = 0;
 	if (context == NULL) {
 		// Switch to Linux
@@ -225,8 +231,8 @@ void pmp_switch(enclave_context *context)
 		// p6 = context->pa >> PMP_SHIFT;
 		// p7 = (context->pa + context->mem_size) >> PMP_SHIFT;
 		// cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
-		sbi_printf("[m mode pmp_switch] p6 = 0x%lx, p7 = 0x%lx, cfg = 0x%lx\n",
-			p6, p7, cfg);
+		debug("[m mode pmp_switch] p4 = 0x%lx, p5 = 0x%lx, cfg = 0x%lx\n",
+			p4, p5, cfg);
 	}
 
 	asm volatile("csrw pmpaddr0, %[p0]\n\t"
@@ -248,7 +254,7 @@ void pmp_allow_access(drv_ctrl_t* peri){
 	p2 = peri->reg_addr >> PMP_SHIFT;
 	p3 = (peri->reg_addr + peri->reg_size) >> PMP_SHIFT;
 	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-	sbi_printf("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
+	debug("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
 
 	asm volatile(
 	     "csrw pmpaddr2, %[p2]\n\t"

@@ -79,7 +79,7 @@ int ebi_gettimeofday(struct timeval *tv, struct timezone *tz)
 	tv->tv_sec = time / 1000000000;
 	tv->tv_usec = (time % 1000000000) / 1000; //  microsecond (μs)
 
-	printd("***** gettimeofday: second: %ld, microsecond: %ld *****\n", tv->tv_sec, tv->tv_usec);
+	// printd("***** gettimeofday: second: %ld, microsecond: %ld *****\n", tv->tv_sec, tv->tv_usec);
 
 	return 0;
 }

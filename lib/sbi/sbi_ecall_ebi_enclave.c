@@ -527,46 +527,46 @@ void inform_peri(struct sbi_trap_regs *regs){
 /* pause an enclave, do not take care of ret */
 uintptr_t suspend_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc)
 {
-	enclave_context *from = &(enclaves[id]);
-	// ensure one can only pause itself
-	if (from->status != ENC_RUN)
-		return EBI_ERROR;
+	// enclave_context *from = &(enclaves[id]);
+	// // ensure one can only pause itself
+	// if (from->status != ENC_RUN)
+	// 	return EBI_ERROR;
 
-	save_umode_context(from, regs);
-	save_csr_context(from, mepc, regs);
-	// protect entire enclave section
-	pmp_switch(NULL);
-	/* Stop paging and save page table */
-	csr_write(CSR_SATP, 0x0);
-	flush_tlb();
+	// save_umode_context(from, regs);
+	// save_csr_context(from, mepc, regs);
+	// // protect entire enclave section
+	// pmp_switch(NULL);
+	// /* Stop paging and save page table */
+	// csr_write(CSR_SATP, 0x0);
+	// flush_tlb();
 
-	from->status = ENC_IDLE;
+	// from->status = ENC_IDLE;
 	return 0;
 }
 /* resume certain enclave, must exist */
 uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs)
 {
-	enclave_context *into = &(enclaves[id]);
-	if (into->status != ENC_IDLE && into->status != ENC_LOAD)
-		return EBI_ERROR;
+	// enclave_context *into = &(enclaves[id]);
+	// if (into->status != ENC_IDLE && into->status != ENC_LOAD)
+	// 	return EBI_ERROR;
 
-	pmp_switch(into);
-	restore_csr_context(into, regs);
-	if (into->status == ENC_IDLE)
-		restore_umode_context(into, regs);
-	else {
-		/* User parameter */
-		regs[A5_INDEX] = regs[A1_INDEX];
-		regs[A6_INDEX] = regs[A2_INDEX];
+	// pmp_switch(into);
+	// restore_csr_context(into, regs);
+	// if (into->status == ENC_IDLE)
+	// 	restore_umode_context(into, regs);
+	// else {
+	// 	/* User parameter */
+	// 	regs[A5_INDEX] = regs[A1_INDEX];
+	// 	regs[A6_INDEX] = regs[A2_INDEX];
 
-		regs[A0_INDEX] = id;
-		regs[A1_INDEX] = id;
-		regs[A2_INDEX] = into->pa;
-		regs[A3_INDEX] = into->enclave_binary_size;
-		regs[A4_INDEX] = into->drv_list;
-	}
-	into->status = ENC_RUN;
-	return id;
+	// 	regs[A0_INDEX] = id;
+	// 	regs[A1_INDEX] = id;
+	// 	regs[A2_INDEX] = into->pa;
+	// 	regs[A3_INDEX] = into->enclave_binary_size;
+	// 	regs[A4_INDEX] = into->drv_list;
+	// }
+	// into->status = ENC_RUN;
+	// return id;
 	return 0;
 }
 

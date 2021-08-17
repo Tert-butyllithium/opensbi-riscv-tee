@@ -44,13 +44,13 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 	    return ret;
     
     case SBI_EXT_EBI_SUSPEND:
-        suspend_enclave(eid, regs, mepc);
+        // suspend_enclave(eid, regs, mepc);
         // peri_clear(eid);
         return ret;
     
     case SBI_EXT_EBI_RESUME:
-        resume_enclave(eid, regs);
-
+        // resume_enclave(eid, regs);
+        return ret;
     
     case SBI_EXT_EBI_PERI_INFORM:
         inform_peri(regs);

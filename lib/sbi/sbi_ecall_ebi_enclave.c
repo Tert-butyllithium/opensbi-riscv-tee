@@ -581,8 +581,11 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *args)
 {
 	enclave_context *into = &(enclaves[id]);
 	struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
-	if (into->status != ENC_IDLE && into->status != ENC_LOAD)
-		return EBI_ERROR;
+	if (into->status != ENC_IDLE && into->status != ENC_LOAD) {
+		sbi_printf("[M mode resume_enclave]\n");
+		// return EBI_ERROR;
+		return 0;
+	}
 
 	pmp_switch(into);
 	restore_csr_context(into, regs);
@@ -600,7 +603,6 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *args)
 		regs->a4 = into->drv_list;
 	}
 	into->status = ENC_RUN;
-	return id;
 	return 0;
 }
 

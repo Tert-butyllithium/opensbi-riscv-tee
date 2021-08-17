@@ -182,9 +182,12 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 found:
 	set_section_zero(ret);
 	update_section_info(ret, eid, va);
-	// PMP
 
-	return ret << SECTION_SHIFT;
+	sbi_printf("[M mode sbi_ecall_ebi_mem] return 0x%lx, ret = 0x%lx\n",
+		ret << SECTION_SHIFT, ret);
+	// PMP
+	ret <<= SECTION_SHIFT;
+	return ret;
 }
 
 static void page_compaction()
@@ -483,7 +486,7 @@ static pte* get_pte(uintptr_t pt_root, uintptr_t va)
 					// *(uintptr_t *)&tmp_entry, &root[l[i]]);
 			return &root[l[i]];
 		}
-		tmp  = tmp_entry.ppn << 12;
+		tmp  = (uintptr_t)tmp_entry.ppn << 12;
 		root = (pte *)tmp;
 		i++;
 	}
@@ -668,7 +671,8 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	//		(1). updates its linear map pte
 	//		(2). check the inverse map, update the pte if pa is
 	//		     in the table and update the inverse map
-	update_tree_pte(pt_root, delta_addr);
+	if (is_base_module)
+		update_tree_pte(pt_root, delta_addr);
 
 	for (uintptr_t offset = 0; offset < SECTION_SIZE; offset += EPAGE_SIZE) {
 		va = linear_start_va + offset;
@@ -691,12 +695,6 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 	// 5. free the src section
 	free_section(src_sfn);
-
-	// debug start ----------
-	pte* tmp_pte1 = get_pte(pt_root, 0x1110eUL);
-	sbi_printf("[M mode section_migration] tmp_pte1: 0x%lx\n",
-			*(uintptr_t *)tmp_pte1);
-	// debug end  ----------
 
 	// 6. flush tlb, cache
 	flush_tlb();

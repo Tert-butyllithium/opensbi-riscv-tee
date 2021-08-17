@@ -324,6 +324,11 @@ void sbi_trap_handler(struct sbi_trap_regs *regs, struct sbi_scratch *scratch)
 		}
 		if ((pmp_test = pmp_exception_handle(csr_read(CSR_STVAL),
 						     hartid)) != NULL) {
+			while (pmp_test->using_by >=1)
+			{
+				;
+				/* code */
+			}
 			pmp_allow_access(pmp_test);
 			regs->mepc = csr_read(CSR_MEPC);
 			// regs->mstatus &= ~ (3 << MSTATUS_MPP_SHIFT);

@@ -52,7 +52,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 
 	uint8_t md2hash[MD2_LEN];
 	md2((void *)mem_start, usr_size, md2hash);
-	printd("[S mode init_mem] SHA3 checksum\n");
+	printd("[S mode init_mem] md2 checksum\n");
 	// for (int i = 0; i < MD2_LEN; ++i) {
 		// printd("%s", UINT8_TO_STR(md2hash[i]));
 	// }

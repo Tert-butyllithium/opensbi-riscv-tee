@@ -58,26 +58,25 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 				 struct sbi_trap_info *out_trap)
 {
 	sbi_printf("[debug_handler] ############## DEBUG START ###########\n");
-	uintptr_t satp = csr_read(CSR_SATP);
-	uintptr_t mxstatus = csr_read(CSR_MXSTATUS);
+	if (funcid == 0x11223344) {
+		section_ownership_dump();
+		return 0;
+	}
 
-	sbi_printf("satp = 0x%lx\n", satp);
-	sbi_printf("mxstatus = 0x%lx\n", mxstatus);
+	if (funcid == 0x22334455) {
+		uintptr_t number = args[2];
+		uintptr_t src_sfn = args[0];
+		uintptr_t offset = args[1];
 
-	uintptr_t mask = ~(-1UL << 27);
-	uintptr_t pte_ppn_mask = ~(-1UL << 44);
-	uintptr_t pt_root = (satp & mask) << 12;
+		sbi_printf("migration: 0x%lx to 0x%lx, %ld sections\n",
+				src_sfn << SECTION_SHIFT,
+				(src_sfn + offset) << SECTION_SHIFT,
+				number);
+		
+		for (int i = 0; i < number; i++)
+			section_migration(src_sfn + i, src_sfn + i + offset);
+	}
 
-	uintptr_t root_pte = *(uintptr_t *)(pt_root);
-	uintptr_t first_page_table_addr = ((root_pte >> 10) & pte_ppn_mask) << 12;
-
-	uintptr_t first_page_table_pte = *(uintptr_t *)first_page_table_addr;
-	uintptr_t second_page_table_addr = ((first_page_table_pte >> 10) & pte_ppn_mask) << 12;
-
-	sbi_printf("1st level pt @ 0x%lx\n", first_page_table_addr);
-	sbi_printf("2nd level pt @ 0x%lx\n", second_page_table_addr);
-
-	mem_dump(second_page_table_addr, 1024);
 	sbi_printf("[debug_handler] ############## DEBUG END ###########\n");
 	return 0;
 }

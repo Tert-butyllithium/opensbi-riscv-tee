@@ -56,13 +56,21 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
 	    return ret;
     
     case SBI_EXT_EBI_SUSPEND:
-        suspend_enclave(eid, regs, mepc);
+        sbi_printf("[sbi_ecall_ebi_handler] suspend %d\n", eid);
+        suspend_enclave(eid, args, mepc);
+        resume_enclave(0, args);
         // peri_clear(eid);
         return ret;
     
     case SBI_EXT_EBI_RESUME:
-        resume_enclave(eid, regs);
-
+        sbi_printf("[sbi_ecall_ebi_handler] resume %ld\n", args[0]);
+        if (eid != 0) {
+            sbi_printf("[sbi_ecall_ebi_handler] should call resume from Linux\n");
+            return ret;
+        }
+        suspend_enclave(0, args, mepc);
+        resume_enclave(args[0], args);
+        return ret;
     
     case SBI_EXT_EBI_PERI_INFORM:
         inform_peri(regs);

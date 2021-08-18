@@ -17,7 +17,7 @@
 
 // make sure these addresses are section aligned
 #define	MEMORY_POOL_START 0x60000000
-#define MEMORY_POOL_END	  0xBF800000
+#define MEMORY_POOL_END	  0xB8000000
 #define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
 				>> SECTION_SHIFT)
 
@@ -41,6 +41,7 @@ extern struct section memory_pool[MEMORY_POOL_SECTION_NUM];
 
 uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va);
 void init_memory_pool();
+void compaction_test();
 void free_section_for_enclave(int eid);
 void section_ownership_dump();
 int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn);

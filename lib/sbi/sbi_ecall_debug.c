@@ -58,12 +58,12 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 				   struct sbi_trap_info *out_trap)
 {
 	sbi_printf("[debug_handler] ############## DEBUG START ###########\n");
-	if (funcid == 0x11223344) {
+	if (funcid == 1) {
 		section_ownership_dump();
 		return 0;
 	}
 
-	if (funcid == 0x22334455) {
+	if (funcid == 2) {
 		uintptr_t src_sfn = args[0] >> SECTION_SHIFT;
 		uintptr_t offset  = args[1];
 		uintptr_t number  = args[2];
@@ -79,6 +79,14 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 			section_migration(src_sfn + i, src_sfn + i + offset);
 		cycle2 = csr_read(CSR_CYCLE);
 		sbi_printf("\033[0;36m0x%lx cycles\033[0m\n", cycle2 - cycle1);
+	}
+
+	if (funcid == 3) {
+		uintptr_t cycle1, cycle2;
+		cycle1 = csr_read(CSR_CYCLE);
+		compaction_test();
+		cycle2 = csr_read(CSR_CYCLE);
+		sbi_printf("\033[0;36mcompaction takes 0x%lx cycles\033[0m\n", cycle2 - cycle1);
 	}
 
 	sbi_printf("[debug_handler] ############## DEBUG END ###########\n");

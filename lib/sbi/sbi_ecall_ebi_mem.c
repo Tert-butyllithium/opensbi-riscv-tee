@@ -33,6 +33,7 @@ struct region {
 static struct section *find_avail_section(void);
 static void page_compaction();
 static struct region find_smallest_region(int eid);
+static struct region find_largest_avail();
 static struct region find_avail_region_larger_than(int length);
 static int get_avail_pmp_count(enclave_context *context);
 static void update_section_info(uintptr_t sfn, int owner, uintptr_t va);
@@ -73,6 +74,11 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 		asm volatile ("dcache.ipa a0");
 
 	asm volatile (".long 0x01b0000b");
+}
+
+void compaction_test()
+{
+	page_compaction();
 }
 
 // returns pa
@@ -267,6 +273,52 @@ static struct region find_avail_region_larger_than(int length)
 	return ret;
 }
 
+static struct region find_largest_avail()
+{
+	int i;
+	struct section *sec;
+	uintptr_t head = 0, tail = 0; // sfn
+	int hit = 0; // state machine flag
+	int max = 0;
+	int len;
+	struct region ret = {0};
+
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner >= 0 && hit) {
+			len = (int)(tail - head + 1);
+			if (len > max) {
+				max = len;
+				ret.sfn = head;
+				ret.length = max;
+			}
+			hit = 0;
+		}
+
+		if (sec->owner < 0 && !hit) {
+			head = sec->sfn;
+			tail = sec->sfn;
+			hit = 1;
+		}
+
+		if (sec->owner < 0 && hit) {
+			tail++;
+		}
+	}
+
+	// if the region is at the end of the section list
+	if (hit) {
+		len = (int)(tail - head + 1);
+		if (len > max) {
+			max = len;
+			ret.sfn = head;
+			ret.length = max;
+		}
+	}
+
+	return ret;
+}
+
+
 static struct region find_smallest_region(int eid)
 {
 	int i;
@@ -357,15 +409,22 @@ void init_memory_pool()
 
 static struct section *find_avail_section()
 {
-	int i;
-	struct section *sec;
+	struct region reg = find_largest_avail();
+	uintptr_t ret_sfn = 0;
+	struct section *sec = NULL;
 
-	for_each_section_in_pool(memory_pool, sec, i) {
-		if (sec->owner < 0)
-			return sec;
+	if (reg.length == 0) {
+		sbi_printf("[M mode find_avail_section] OOM!\n");
+		return NULL;
 	}
 
-	return NULL;
+	sbi_printf("[M mode find_avail_section] largest region at 0x%lx,"
+			"middle at 0x%lx\n", reg.sfn << SECTION_SHIFT,
+			(reg.sfn + (reg.length>>1)) << SECTION_SHIFT);
+	ret_sfn = reg.sfn + (reg.length >> 1);
+	sec = sfn_to_section(ret_sfn);
+	
+	return sec;
 }
 
 __unused static void pmp_allow(struct section *sec)

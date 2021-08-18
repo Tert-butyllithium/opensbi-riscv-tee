@@ -197,14 +197,14 @@ uintptr_t get_pa(uintptr_t va)
 		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
 			break;
 		}
-		tmp  = tmp_entry.ppn << 12;
+		tmp  = (uintptr_t)tmp_entry.ppn << 12;
 		root = (pte *)(tmp + va_pa_offset());
 		i++;
 	}
 	if (i == 2)
-		return (tmp_entry.ppn << 12) | (va & 0xfff);
+		return ((uintptr_t)tmp_entry.ppn << 12) | (va & 0xfff);
 	else if (i == 1)
-		return (tmp_entry.ppn >> 9) << 21 | (va & 0x1fffff);
+		return ((uintptr_t)tmp_entry.ppn >> 9) << 21 | (va & 0x1fffff);
 	else {
 		return 0;
 	}

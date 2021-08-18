@@ -5,6 +5,7 @@
 #include <sbi/sbi_ecall_ebi_enclave.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_ecall_ebi_dma.h>
+#include <sbi/sbi_hart.h>
 
 #define for_each_section_in_pool(pool, section, i) \
 	for (i = 0, section = &pool[i]; \
@@ -221,13 +222,13 @@ static void page_compaction()
 				}
 			}
 
-			if (done)
+			if (done) {
+				section_ownership_dump();
 				return;
+			}
 			
 		}
 	}
-
-	section_ownership_dump();
 }
 
 static struct region find_avail_region_larger_than(int length)
@@ -643,9 +644,9 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	uintptr_t src_pa = src_sfn << SECTION_SHIFT;
 	uintptr_t dst_pa = dst_sfn << SECTION_SHIFT;
 	uintptr_t delta_addr = dst_pa - src_pa;
-	uintptr_t eid = src_sec->owner;
+	uintptr_t src_owner = src_sec->owner;
 	uintptr_t linear_start_va = src_sec->va;
-	enclave_context *context = eid_to_context(eid);
+	enclave_context *context = eid_to_context(src_owner);
 	uintptr_t pt_root_addr;
 	uintptr_t inv_map_addr;
 	uintptr_t offset_addr;
@@ -654,17 +655,19 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	uintptr_t va;
 	inverse_map *inv_map_entry;
 	uintptr_t satp;
+	uint32_t hartid = sbi_current_hartid();
+	uintptr_t eid = (uintptr_t)enclave_on_core[hartid];
 
 	// debug start -------
 	sbi_printf("[M mode section_migration] src_pa = 0x%lx, dst_pa = 0x%lx, "
 			"delta_addr = 0x%lx\n",
 			src_pa, dst_pa, delta_addr);
-	sbi_printf("[M mode section_migration] eid = 0x%lx\n", eid);
+	sbi_printf("[M mode section_migration] src_owner = 0x%lx\n", src_owner);
 	sbi_printf("[M mode section_migration] linear_start_va = 0x%lx\n",
 			linear_start_va);
 	// debug end   -------
 
-	if (eid < 0 || context == NULL) {
+	if (src_owner < 0 || context == NULL) {
 		sbi_printf("[M mode section_migration] ERROR!\n");
 		return 0;
 	}
@@ -689,7 +692,7 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 	// 2. Section content copy, set section va, owner
 	section_copy(src_sfn, dst_sfn);
-	dst_sec->owner = eid;
+	dst_sec->owner = src_owner;
 	dst_sec->va = linear_start_va;
 
 	// 3. For base module, calculate the new pa of pt_root,
@@ -712,7 +715,12 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 		pt_root = *(uintptr_t *)pt_root_addr;
 		satp = pt_root >> EPAGE_SHIFT;
 		satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
-		csr_write(CSR_SATP, satp);
+		if (eid == src_owner) {
+			csr_write(CSR_SATP, satp);
+		} else {
+			enclave_context *owner_context = eid_to_context(src_owner);
+			owner_context->ns_satp = satp;
+		}
 
 		sbi_printf("[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
 				offset_addr, *(uintptr_t *)offset_addr);

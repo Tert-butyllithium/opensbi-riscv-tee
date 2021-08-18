@@ -153,7 +153,7 @@ typedef struct {
   uintptr_t used;
 } pmp_region;
 
-#define PMP_REGION_MAX 1
+#define PMP_REGION_MAX 2 
 
 typedef struct {
     uintptr_t id;

@@ -173,6 +173,8 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 
 	// 2. If no such section exists, then check whether the PMP resource
 	//    has run out. If not, allocate a new section for the enclave
+	sbi_printf("[M mode alloc_section_for_enclave] pmp avail: %d\n",
+			get_avail_pmp_count(context));
 	if (get_avail_pmp_count(context) > 0) {
 		sec = find_avail_section();
 		if (!sec) {
@@ -192,9 +194,13 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 step3:
 	smallest = find_smallest_region(eid);
 	avail = find_avail_region_larger_than(smallest.length);
+	sbi_printf("[M mode alloc_section_for_enclave] avail region larger than %d: "
+			"at 0x%lx, len %d\n",
+			smallest.length, avail.sfn << SECTION_SHIFT, avail.length);
 	if (avail.length) {
-		section_migration(smallest.sfn, avail.sfn);
-		ret = smallest.sfn + smallest.length;
+		for (int i = 0; i < smallest.length; i++)
+			section_migration(smallest.sfn + i, avail.sfn + i);
+		ret = avail.sfn + smallest.length;
 		goto found;
 	}
 
@@ -253,7 +259,9 @@ static struct region find_avail_region_larger_than(int length)
 	uintptr_t head = 0, tail = 0;
 	int hit = 0;
 	int len;
-	struct region ret = {0};
+	struct region ret;
+
+	sbi_memset((void *)&ret, 0, sizeof(struct region));
 
 	for_each_section_in_pool(memory_pool, sec, i) {
 		if (sec->owner >= 0 && hit) {
@@ -270,6 +278,7 @@ static struct region find_avail_region_larger_than(int length)
 			head = sec->sfn;
 			tail = sec->sfn;
 			hit = 1;
+			continue;
 		}
 
 		if (sec->owner < 0 && hit) {
@@ -316,6 +325,7 @@ static struct region find_largest_avail()
 			head = sec->sfn;
 			tail = sec->sfn;
 			hit = 1;
+			continue;
 		}
 
 		if (sec->owner < 0 && hit) {
@@ -332,6 +342,8 @@ static struct region find_largest_avail()
 			ret.length = max;
 		}
 	}
+	sbi_printf("[M mode find_largest_avail] largest: at 0x%lx, %d sections\n",
+			ret.sfn >> SECTION_SHIFT, ret.length);
 
 	return ret;
 }
@@ -343,7 +355,7 @@ static struct region find_smallest_region(int eid)
 	struct section *sec;
 	uintptr_t head = 0, tail = 0; // sfn
 	int hit = 0; // state machine flag
-	int min = 0;
+	int min = MEMORY_POOL_SECTION_NUM + 1;
 	int len;
 	struct region ret = {0};
 
@@ -362,6 +374,7 @@ static struct region find_smallest_region(int eid)
 			head = sec->sfn;
 			tail = sec->sfn;
 			hit = 1;
+			continue;
 		}
 
 		if (sec->owner == eid && hit) {
@@ -378,6 +391,9 @@ static struct region find_smallest_region(int eid)
 			ret.length = min;
 		}
 	}
+
+	sbi_printf("[M mode find_smallest_region] %d smallest: at 0x%lx, %d sections\n",
+			eid, ret.sfn << SECTION_SHIFT, ret.length);
 
 	return ret;
 }
@@ -496,33 +512,34 @@ void section_ownership_dump()
 {
 	int i, j;
 	struct section *sec;
-	// const int line_len = 5; // complex version
-	const int line_len = 32; // brief version
+	const int line_len = 5; // complex version
+	// const int line_len = 32; // brief version
 
 	// complex version (do not delete)
-	// sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
-	// for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
-	// 	for (i = 0, sec = &memory_pool[i+j];
-	// 			i < line_len;
-	// 			i++, sec = &memory_pool[i+j])
-	// 		sbi_printf("0x%lx: 0x%lx\t", sec->sfn, sec->va);
-	// 	sbi_printf("\n");
-	// }
+	sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
+	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+		for (i = 0, sec = &memory_pool[i+j];
+				i < line_len;
+				i++, sec = &memory_pool[i+j])
+			sbi_printf("0x%lx:  %d\t", sec->sfn, sec->owner);
+			// sbi_printf("0x%lx: 0x%lx\t", sec->sfn, sec->va);
+		sbi_printf("\n");
+	}
 
 	// brief version (do not delete)
-	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+	// for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
 
-		for (i = 0, sec = &memory_pool[i+j];
-				i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
-				i++, sec = &memory_pool[i+j]) {
-			if (sec->owner < 0)
-				sbi_printf("x  ");
-			else
-				sbi_printf("%d  ", sec->owner);
-		}
-		sbi_printf("\n");
+	// 	for (i = 0, sec = &memory_pool[i+j];
+	// 			i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
+	// 			i++, sec = &memory_pool[i+j]) {
+	// 		if (sec->owner < 0)
+	// 			sbi_printf("x  ");
+	// 		else
+	// 			sbi_printf("%d  ", sec->owner);
+	// 	}
+	// 	sbi_printf("\n");
 		
-	}
+	// }
 
 	sbi_printf("[M mode section_ownership_dump end]---------------------------\n");
 }
@@ -674,9 +691,9 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	uintptr_t eid = (uintptr_t)enclave_on_core[hartid];
 
 	// debug start -------
-	sbi_printf("[M mode section_migration] src_pa = 0x%lx, dst_pa = 0x%lx, "
+	sbi_printf("[M mode section_migration] src_pa = 0x%lx(0x%lx), dst_pa = 0x%lx(0x%lx), "
 			"delta_addr = 0x%lx\n",
-			src_pa, dst_pa, delta_addr);
+			src_pa, src_sfn, dst_pa, dst_sfn, delta_addr);
 	sbi_printf("[M mode section_migration] src_owner = 0x%lx\n", src_owner);
 	sbi_printf("[M mode section_migration] linear_start_va = 0x%lx\n",
 			linear_start_va);

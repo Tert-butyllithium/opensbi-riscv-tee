@@ -191,6 +191,7 @@ uintptr_t enclave_mem_free(enclave_context *context)
 	context->offset_addr		= 0;
 	context->pt_root_addr		= 0;
 	context->inverse_map_addr	= 0;
+	sbi_memset(&context->pmp_reg, 0, sizeof(context->pmp_reg));
 
 	sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
 	free_section_for_enclave(eid);
@@ -203,73 +204,73 @@ int enclave_on_core[NUM_CORES];
 
 void pmp_switch(enclave_context *context)
 {
-	sbi_printf("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
-	uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0, cfg = 0;
-	if (context == NULL) {
-		// Switch to Linux
-		extern char _enclave_end;
-		p0  = (uintptr_t)(FW_TEXT_START) >> PMP_SHIFT;
-		p1  = (uintptr_t)(&_enclave_end) >> PMP_SHIFT;
-		cfg = PMP_A_TOR << 8;
-		p2  = 0 >> PMP_SHIFT;
-		p3  = -1UL >> PMP_SHIFT;
-		cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+	// sbi_printf("\033[0;36m[pmp_switch] to %s\n\033[0m",context?"enclave":"Linux");
+	// uintptr_t p0 = 0, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0, cfg = 0;
+	// if (context == NULL) {
+	// 	// Switch to Linux
+	// 	extern char _enclave_end;
+	// 	p0  = (uintptr_t)(FW_TEXT_START) >> PMP_SHIFT;
+	// 	p1  = (uintptr_t)(&_enclave_end) >> PMP_SHIFT;
+	// 	cfg = PMP_A_TOR << 8;
+	// 	p2  = 0 >> PMP_SHIFT;
+	// 	p3  = -1UL >> PMP_SHIFT;
+	// 	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
 
-	} else {
-		// Switch to some enclave
-		p6 = 0UL >> PMP_SHIFT;
-		p7 = -1UL >> PMP_SHIFT;
-		// p6 = context->pa >> PMP_SHIFT;
-		// p7 = (context->pa + context->mem_size) >> PMP_SHIFT;
-		cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
-		sbi_printf("[m mode pmp_switch] p6 = 0x%lx, p7 = 0x%lx, cfg = 0x%lx\n",
-			p6, p7, cfg);
-	}
+	// } else {
+	// 	// Switch to some enclave
+	// 	p6 = 0UL >> PMP_SHIFT;
+	// 	p7 = -1UL >> PMP_SHIFT;
+	// 	// p6 = context->pa >> PMP_SHIFT;
+	// 	// p7 = (context->pa + context->mem_size) >> PMP_SHIFT;
+	// 	cfg = (uintptr_t)(PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 56;
+	// 	sbi_printf("[m mode pmp_switch] p6 = 0x%lx, p7 = 0x%lx, cfg = 0x%lx\n",
+	// 		p6, p7, cfg);
+	// }
 
-	asm volatile("csrw pmpaddr0, %[p0]\n\t"
-		     "csrw pmpaddr1, %[p1]\n\t"
-		     "csrw pmpaddr2, %[p2]\n\t"
-		     "csrw pmpaddr3, %[p3]\n\t"
-		     "csrw pmpaddr4, %[p4]\n\t"
-		     "csrw pmpaddr5, %[p5]\n\t"
-		     "csrw pmpaddr6, %[p6]\n\t"
-		     "csrw pmpaddr7, %[p7]\n\t"
-		     "csrw pmpcfg0, %[cfg]" ::[p0] "r"(p0),
-		     [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3), [p4] "r"(p4),
-		     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
+	// asm volatile("csrw pmpaddr0, %[p0]\n\t"
+	// 	     "csrw pmpaddr1, %[p1]\n\t"
+	// 	     "csrw pmpaddr2, %[p2]\n\t"
+	// 	     "csrw pmpaddr3, %[p3]\n\t"
+	// 	     "csrw pmpaddr4, %[p4]\n\t"
+	// 	     "csrw pmpaddr5, %[p5]\n\t"
+	// 	     "csrw pmpaddr6, %[p6]\n\t"
+	// 	     "csrw pmpaddr7, %[p7]\n\t"
+	// 	     "csrw pmpcfg0, %[cfg]" ::[p0] "r"(p0),
+	// 	     [p1] "r"(p1), [p2] "r"(p2), [p3] "r"(p3), [p4] "r"(p4),
+	// 	     [p5] "r"(p5), [p6] "r"(p6), [p7] "r"(p7), [cfg] "r"(cfg));
 }
 
 void pmp_allow_access(peri_addr_t* peri){
-	__attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
-	cfg = csr_read(CSR_PMPCFG0);
-	p2 = peri->reg_pa_start >> PMP_SHIFT;
-	p3 = (peri->reg_pa_start + peri->reg_size) >> PMP_SHIFT;
-	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
-	sbi_printf("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
+	// __attribute__((unused)) uintptr_t p2 = 0, p3 = 0, p4 = 0, p5 = 0, cfg;
+	// cfg = csr_read(CSR_PMPCFG0);
+	// p2 = peri->reg_pa_start >> PMP_SHIFT;
+	// p3 = (peri->reg_pa_start + peri->reg_size) >> PMP_SHIFT;
+	// cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 24;
+	// sbi_printf("[pmp_allow_access] PMP 0x%lx ~ 0x%lx\n",p2 << PMP_SHIFT,p3 << PMP_SHIFT);
 
-	asm volatile(
-	     "csrw pmpaddr2, %[p2]\n\t"
-	     "csrw pmpaddr3, %[p3]\n\t"
-	     "csrw pmpcfg0, %[cfg]" ::[p2] "r"(p2), [p3] "r"(p3), [cfg] "r"(cfg));
-	flush_tlb();
+	// asm volatile(
+	//      "csrw pmpaddr2, %[p2]\n\t"
+	//      "csrw pmpaddr3, %[p3]\n\t"
+	//      "csrw pmpcfg0, %[cfg]" ::[p2] "r"(p2), [p3] "r"(p3), [cfg] "r"(cfg));
+	// flush_tlb();
 }
 
 void pmp_allow_region(uintptr_t pa, uintptr_t size)
 {
-	uintptr_t p4, p5, cfg;
-	cfg = csr_read(CSR_PMPCFG0);
-	p4 = pa >> PMP_SHIFT;
-	p5 = (pa + size) >> PMP_SHIFT;
-	cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
-	sbi_printf("[pmp_allow_region] PMP 0x%lx ~ 0x%lx\n",
-			p4 << PMP_SHIFT,
-			p5 << PMP_SHIFT);
+	// uintptr_t p4, p5, cfg;
+	// cfg = csr_read(CSR_PMPCFG0);
+	// p4 = pa >> PMP_SHIFT;
+	// p5 = (pa + size) >> PMP_SHIFT;
+	// cfg |= (PMP_A_TOR | PMP_R | PMP_W | PMP_X) << 40;
+	// sbi_printf("[pmp_allow_region] PMP 0x%lx ~ 0x%lx\n",
+	// 		p4 << PMP_SHIFT,
+	// 		p5 << PMP_SHIFT);
 
-	asm volatile(
-	     "csrw pmpaddr4, %[p4]\n\t"
-	     "csrw pmpaddr5, %[p5]\n\t"
-	     "csrw pmpcfg0, %[cfg]" ::[p4] "r"(p4), [p5] "r"(p5), [cfg] "r"(cfg));
-	flush_tlb();
+	// asm volatile(
+	//      "csrw pmpaddr4, %[p4]\n\t"
+	//      "csrw pmpaddr5, %[p5]\n\t"
+	//      "csrw pmpcfg0, %[cfg]" ::[p4] "r"(p4), [p5] "r"(p5), [cfg] "r"(cfg));
+	// flush_tlb();
 }
 
 void save_umode_context(enclave_context *context, struct sbi_trap_regs *regs)

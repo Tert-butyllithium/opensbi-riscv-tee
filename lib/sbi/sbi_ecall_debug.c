@@ -86,6 +86,7 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 		cycle1 = csr_read(CSR_CYCLE);
 		compaction_test();
 		cycle2 = csr_read(CSR_CYCLE);
+		section_ownership_dump();
 		sbi_printf("\033[0;36mcompaction takes 0x%lx cycles\033[0m\n", cycle2 - cycle1);
 	}
 

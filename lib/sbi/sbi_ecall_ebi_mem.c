@@ -107,6 +107,18 @@ static uintptr_t alloc_section_for_linux()
 }
 
 
+static void new_pmp_pair(enclave_context *context)
+{
+	for (int i = 0; i < PMP_REGION_MAX; i++) {
+		if (!context->pmp_reg->used) {
+			context->pmp_reg->used = 1;
+			// do something real about pmp
+
+			return;
+		}
+	}
+}
+
 // eid: enclave id
 // va: the section will be linearly mapped to va
 // return: start physical address of the allocated section if success,
@@ -168,6 +180,7 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 			return 0;
 		}
 		ret = sec->sfn;
+		new_pmp_pair(context);
 		goto found;
 	}
 
@@ -176,6 +189,7 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 	//    Look for an available memory region that consists of more than
 	//    n + 1 sections. If found, perform section migration and allocate
 	//    a section.
+step3:
 	smallest = find_smallest_region(eid);
 	avail = find_avail_region_larger_than(smallest.length);
 	if (avail.length) {
@@ -187,6 +201,7 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 	// 4. If still not found, do page compaction, then repeat step 3.
 	page_compaction();
 	// repeat step 3
+	goto step3;
 
 found:
 	set_section_zero(ret);

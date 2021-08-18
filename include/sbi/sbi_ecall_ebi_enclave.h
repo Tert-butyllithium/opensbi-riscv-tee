@@ -245,7 +245,7 @@ typedef struct
 
 
 
-#define NUM_ENCLAVE 10
+#define NUM_ENCLAVE 50
 #define NUM_CORES 10
 
 extern enclave_context enclaves[NUM_ENCLAVE + 1];

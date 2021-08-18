@@ -97,8 +97,10 @@ static uintptr_t alloc_section_for_linux()
 	if (sec->owner > 0)
 		page_compaction();
 	
-	if (sec->owner < 0)
+	if (sec->owner < 0) {
+		update_section_info(sec->sfn, 0, 0);
 		return sec->sfn << SECTION_SHIFT;
+	}
 
 	return 0;
 }
@@ -571,8 +573,8 @@ static void section_copy(uintptr_t src_sfn, uintptr_t dst_sfn)
 	sbi_printf("[M mode section copy] copying from 0x%lx to 0x%lx\n",
 			src_pa, dst_pa);
 
-	// sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
-	dma_copy(src_pa, dst_pa, SECTION_SIZE);
+	sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
+	// dma_copy(src_pa, dst_pa, SECTION_SIZE);
 	// mem_dump(src_pa, 256);
 	// mem_dump(dst_pa, 256);
 }

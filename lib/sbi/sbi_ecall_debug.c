@@ -60,7 +60,6 @@ static int sbi_ecall_debug_handler(struct sbi_scratch *scratch,
 	sbi_printf("[debug_handler] ############## DEBUG START ###########\n");
 	if (funcid == 1) {
 		section_ownership_dump();
-		return 0;
 	}
 
 	if (funcid == 2) {

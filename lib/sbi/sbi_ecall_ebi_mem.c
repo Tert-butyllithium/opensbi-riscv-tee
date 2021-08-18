@@ -130,6 +130,7 @@ uintptr_t alloc_section_for_enclave(enclave_context *context, uintptr_t va)
 	struct section *sec, *tmp;
 	uintptr_t eid;
 	uintptr_t ret = 0;
+	int compactified = 0;
 	struct region smallest, avail;
 
 	if (!context) {
@@ -202,10 +203,16 @@ step3:
 			section_migration(smallest.sfn + i, avail.sfn + i);
 		ret = avail.sfn + smallest.length;
 		goto found;
+	} else {
+		if (compactified) {
+			sbi_printf("[M mode alloc_section_for_enclave] OOM!\n");
+			return 0;
+		}
 	}
 
 	// 4. If still not found, do page compaction, then repeat step 3.
 	page_compaction();
+	compactified = 1;
 	// repeat step 3
 	goto step3;
 

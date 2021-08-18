@@ -110,8 +110,8 @@ static uintptr_t alloc_section_for_linux()
 static void new_pmp_pair(enclave_context *context)
 {
 	for (int i = 0; i < PMP_REGION_MAX; i++) {
-		if (!context->pmp_reg->used) {
-			context->pmp_reg->used = 1;
+		if (!context->pmp_reg[i].used) {
+			context->pmp_reg[i].used = 1;
 			// do something real about pmp
 
 			return;
@@ -415,7 +415,7 @@ static int get_avail_pmp_count(enclave_context *context)
 	}
 
 	for (int i = 0; i < PMP_REGION_MAX; i++) {
-		if (!context->pmp_reg->used)
+		if (!context->pmp_reg[i].used)
 			count++;
 	}
 

@@ -560,11 +560,13 @@ void inform_peri(struct sbi_trap_regs *regs){
 uintptr_t suspend_enclave(uintptr_t id, uintptr_t *args, uintptr_t mepc)
 {
 	enclave_context *from = &(enclaves[id]);
+	uint32_t hartid = sbi_current_hartid();
 	struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
 	// ensure one can only pause itself
 	if (from->status != ENC_RUN)
 		return EBI_ERROR;
 
+	enclave_on_core[hartid] = 0;
 	save_umode_context(from, regs);
 	save_csr_context(from, mepc, regs);
 	// protect entire enclave section
@@ -580,6 +582,7 @@ uintptr_t suspend_enclave(uintptr_t id, uintptr_t *args, uintptr_t mepc)
 uintptr_t resume_enclave(uintptr_t id, uintptr_t *args)
 {
 	enclave_context *into = &(enclaves[id]);
+	uint32_t hartid = sbi_current_hartid();
 	struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
 	if (into->status != ENC_IDLE && into->status != ENC_LOAD) {
 		sbi_printf("[M mode resume_enclave]\n");
@@ -587,6 +590,7 @@ uintptr_t resume_enclave(uintptr_t id, uintptr_t *args)
 		return 0;
 	}
 
+	enclave_on_core[hartid] = id;
 	pmp_switch(into);
 	restore_csr_context(into, regs);
 	if (into->status == ENC_IDLE)

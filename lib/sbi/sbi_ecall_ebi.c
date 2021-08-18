@@ -63,7 +63,8 @@ static int sbi_ecall_ebi_handler(struct sbi_scratch *scratch,
         return ret;
     
     case SBI_EXT_EBI_RESUME:
-        sbi_printf("[sbi_ecall_ebi_handler] resume %ld\n", args[0]);
+        sbi_printf("[sbi_ecall_ebi_handler] current eid = 0x%x, resume %ld\n",
+                        eid, args[0]);
         if (eid != 0) {
             sbi_printf("[sbi_ecall_ebi_handler] should call resume from Linux\n");
             return ret;

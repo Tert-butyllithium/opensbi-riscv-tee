@@ -516,9 +516,9 @@ void section_ownership_dump()
 				i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
 				i++, sec = &memory_pool[i+j]) {
 			if (sec->owner < 0)
-				sbi_printf("x");
+				sbi_printf("x  ");
 			else
-				sbi_printf("%d", sec->owner);
+				sbi_printf("%d  ", sec->owner);
 		}
 		sbi_printf("\n");
 		

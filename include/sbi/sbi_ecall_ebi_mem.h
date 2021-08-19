@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <sbi/sbi_ecall_ebi_enclave.h>
 
-#define SECTION_SHIFT	  23			// should be less than or equal to 26
+#define SECTION_SHIFT	  22			// should be less than or equal to 26
 #define SECTION_SIZE	  (1UL << SECTION_SHIFT)
 
 #define SECTION_UP(addr) (ROUND_UP(addr, SECTION_SIZE))

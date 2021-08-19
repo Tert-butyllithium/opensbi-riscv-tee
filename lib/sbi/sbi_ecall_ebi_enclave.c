@@ -199,7 +199,9 @@ uintptr_t enclave_mem_free(enclave_context *context)
 	return EBI_OK;
 }
 
-enclave_context enclaves[NUM_ENCLAVE + 1];
+// enclave_context enclaves[NUM_ENCLAVE + 1];
+enclave_context *enclaves = (enclave_context *)(MEMORY_POOL_END);
+
 int enclave_on_core[NUM_CORES]; 
 
 void pmp_switch(enclave_context *context)
@@ -374,7 +376,7 @@ void init_enclaves(void)
 {
 	// enclave_mem_init();
 	init_memory_pool();
-	// sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
+	sbi_memset(enclaves, 0, sizeof(enclave_context) * NUM_ENCLAVE);
 	enclaves[0].status = ENC_RUN;
 	for (size_t i = 1; i <= NUM_ENCLAVE; ++i)
 		enclaves[i].status = ENC_FREE;

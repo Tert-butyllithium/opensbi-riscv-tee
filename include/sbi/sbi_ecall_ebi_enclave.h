@@ -245,11 +245,12 @@ typedef struct
 
 
 
-#define NUM_ENCLAVE 50
+#define NUM_ENCLAVE 1000
 #define NUM_CORES 10
 
-extern enclave_context enclaves[NUM_ENCLAVE + 1];
-extern int enclave_on_core[NUM_CORES]; 
+// extern enclave_context enclaves[NUM_ENCLAVE + 1];
+extern enclave_context *enclaves;
+extern int enclave_on_core[NUM_CORES];
 
 
 #define MAX_DRV  64
